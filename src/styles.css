@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope Variable", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --color-void: #050505;
+  --color-surface: #0e0d0c;
+  --color-paper: #f2ede7;
+  --color-copper: #e99c72;
+  --color-muted: #a7a099;
+  --animate-arrive: arrive 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-ticker: ticker 48s linear infinite;
+
+  @keyframes arrive {
+    from {
+      opacity: 0.25;
+      transform: translateY(14px);
+      filter: blur(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes ticker {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes soundbar {
+    0%,
+    100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-8px) rotate(1deg);
+    }
+  }
+
+  @keyframes grain {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    10% {
+      transform: translate(-2%, -3%);
+    }
+    20% {
+      transform: translate(3%, 1%);
+    }
+    30% {
+      transform: translate(-1%, 2%);
+    }
+    40% {
+      transform: translate(2%, -1%);
+    }
+    50% {
+      transform: translate(-2%, 3%);
+    }
+    60% {
+      transform: translate(1%, -2%);
+    }
+    70% {
+      transform: translate(-3%, 1%);
+    }
+    80% {
+      transform: translate(2%, 2%);
+    }
+    90% {
+      transform: translate(-1%, -1%);
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
+    scrollbar-color: #6b5041 #050505;
+  }
+
+  body {
+    @apply m-0 bg-void font-sans text-paper selection:bg-copper selection:text-void;
+  }
+
+  @media (pointer: fine) {
+    html,
+    body,
+    *,
+    *::before,
+    *::after,
+    button,
+    a,
+    input,
+    summary,
+    [role="button"],
+    [data-cursor] {
+      cursor: none !important;
+    }
+  }
+
+  button,
+  a,
+  input {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid #e99c72;
+    outline-offset: 5px;
+  }
+
+  input {
+    accent-color: #e99c72;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility page-width {
+  width: min(100% - 3rem, 1200px);
+  margin-inline: auto;
+}
+
+@utility technical {
+  @apply font-mono text-[10px] leading-relaxed tracking-[.14em] uppercase;
+}
+
+@utility button-primary {
+  @apply inline-flex min-h-12 items-center justify-center gap-3 rounded-full border border-copper/80 bg-copper px-7 py-3 text-[12px] font-semibold text-void transition-all duration-300 hover:-translate-y-1 hover:bg-[#f5ba98] hover:shadow-[0_8px_32px_-6px_rgba(233,156,114,0.6)] active:translate-y-px;
+}
+
+@utility button-secondary {
+  @apply inline-flex min-h-12 items-center justify-center gap-3 rounded-full border border-white/15 bg-white/[.03] px-7 py-3 text-[12px] font-medium text-paper backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-copper/50 hover:bg-white/[.08] hover:shadow-[0_8px_24px_-6px_rgba(233,156,114,0.2)] active:translate-y-px;
+}
+
+@utility icon-button {
+  @apply inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-void/60 text-muted backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-copper/50 hover:text-paper hover:shadow-[0_4px_16px_-4px_rgba(233,156,114,0.3)] disabled:opacity-30;
+}
+
+@utility quiet-link {
+  @apply inline-flex min-h-11 items-center gap-2 text-xs text-muted underline-offset-8 transition-colors hover:text-paper hover:underline;
+}
+
+@utility glass-panel {
+  @apply rounded-2xl border border-white/10 bg-gradient-to-br from-white/[.04] to-white/[.01] backdrop-blur-md;
+}
