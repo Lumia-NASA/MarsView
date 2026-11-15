@@ -4,22 +4,41 @@ import { Volume2, VolumeX } from "lucide-react";
 
 export function SoundToggle() {
   const [muted, setMuted] = useState(sound.isMuted());
+  const [error, setError] = useState(sound.getError());
 
   useEffect(() => {
-    return sound.subscribe((isMuted) => setMuted(isMuted));
-  }, []);
+    const sync = () => { setMuted(sound.isMuted()); setError(sound.getError()); };
+    const unsubscribe = sound.subscribe(sync);
+    const unmount = sound.mount();
+    sync();
+    return () => { unsubscribe(); unmount(); };
+  }, [sound]);
 
   const handleToggle = () => {
-    sound.toggleMute();
+    const isMuted = sound.toggleMute();
+    setMuted(isMuted);
+    setError(sound.getError());
   };
 
   return (
     <button
+      type="button"
       onClick={handleToggle}
-      aria-label={muted ? "Enable interface sound effects" : "Mute interface sound effects"}
+      aria-label={
+        error
+          ? "Retry ambient music and sound effects"
+          : muted
+            ? "Enable ambient music and sound effects"
+            : "Mute ambient music and sound effects"
+      }
+      title={
+        error ??
+        (muted ? "Enable ambient music and sound effects" : "Mute all audio")
+      }
+      data-sound-toggle
       aria-pressed={!muted}
       data-cursor="hover"
-      className="inline-flex h-9 items-center gap-2.5 rounded-full border border-white/10 bg-white/[.03] px-3 text-[10px] font-mono tracking-wider text-muted transition duration-300 hover:border-copper/50 hover:bg-white/[.07] hover:text-paper"
+      className="inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/10 bg-white/[.03] px-3 text-[10px] font-mono tracking-wider text-muted transition duration-300 hover:border-copper/50 hover:bg-white/[.07] hover:text-paper"
     >
       {muted ? (
         <VolumeX size={13} className="text-muted" />

@@ -1,11 +1,10 @@
 import {
   Component,
-  lazy,
-  Suspense,
   useEffect,
   useState,
   type ReactNode,
 } from "react";
+import { SurfaceStory } from "./components/SurfaceStory";
 import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { MissionTicker } from "./components/MissionTicker";
@@ -15,12 +14,7 @@ import { PlanetAtlas } from "./components/PlanetAtlas";
 import { Regions } from "./components/Regions";
 import { Telemetry } from "./components/Telemetry";
 import { Footer } from "./components/Footer";
-import { CosmicBackground } from "./components/CosmicBackground";
 import { CustomCursor } from "./components/CustomCursor";
-import { HudCoordinates } from "./components/HudCoordinates";
-import { FilmGrain } from "./components/FilmGrain";
-
-const Explorer = lazy(() => import("./components/Explorer"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -52,8 +46,6 @@ class ErrorBoundary extends Component<
 
 export default function App() {
   const [route, setRoute] = useState(() => window.location.hash);
-  const exploring = route.startsWith("#explorer");
-  const explorerRegion = route.split("/")[1];
 
   useEffect(() => {
     const update = () => setRoute(window.location.hash);
@@ -62,24 +54,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = exploring
-      ? "MarsView — Planetary explorer"
-      : "MarsView — A new perspective on Mars";
-    if (!exploring && route) {
+    document.title = "MarsView — A new perspective on Mars";
+    if (route) {
       const id = route.slice(1);
       requestAnimationFrame(() =>
-        document.getElementById(id)?.scrollIntoView({ behavior: "instant" }),
+        document.getElementById(id)?.scrollIntoView({ behavior: "auto" }),
       );
     }
-  }, [exploring, route]);
+  }, [route]);
 
   return (
     <ErrorBoundary>
-      {/* Lusion-style atmospheric layers */}
-      <CosmicBackground />
-      <FilmGrain />
       <CustomCursor />
-      <HudCoordinates />
 
       <a
         href="#main"
@@ -94,34 +80,18 @@ export default function App() {
         Skip to content
       </a>
 
-      {exploring ? (
-        <Suspense
-          fallback={
-            <main
-              className="grid min-h-svh place-content-center text-sm text-muted"
-              role="status"
-            >
-              Preparing your orbital view…
-            </main>
-          }
-        >
-          <Explorer initialRegionId={explorerRegion} />
-        </Suspense>
-      ) : (
-        <>
-          <Header />
-          <main id="main" tabIndex={-1} className="outline-none">
-            <Hero />
-            <MissionTicker />
-            <Features />
-            <PlanetAtlas />
-            <Regions />
-            <InvestigationFlow />
-            <Telemetry />
-          </main>
-          <Footer />
-        </>
-      )}
+      <Header />
+      <main id="main" tabIndex={-1} className="outline-none">
+        <Hero />
+        <MissionTicker />
+        <Features />
+        <PlanetAtlas />
+        <SurfaceStory />
+        <Regions />
+        <InvestigationFlow />
+        <Telemetry />
+      </main>
+      <Footer />
     </ErrorBoundary>
   );
 }

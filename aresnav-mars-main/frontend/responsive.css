@@ -1,0 +1,174 @@
+/* Mission layout: wide workspace, then one readable panel at a time. */
+.compact-nav,.compact-menu,.compact-close,.compact-tools,.compact-sheet-heading,.compact-backdrop{display:none}
+.compact-helmet-tools{display:none}
+.sidehead{flex-wrap:wrap}
+.sidehead .seg{max-width:100%}
+.sidebody{overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
+.sidebody>*{min-width:0}
+.stat,.stat b,.stat span{min-width:0;overflow-wrap:anywhere}
+.topbar .search{min-width:100px}
+.topbar{gap:10px}
+.topactions{gap:6px}
+.topactions .pillbtn{padding-inline:12px}
+.drawer,.modal-card,.ares{max-height:calc(100dvh - var(--bar) - 32px);overscroll-behavior:contain}
+.stat small{display:block;margin-top:5px;line-height:1.5}
+.tablewrap{max-width:100%;overflow:auto}
+@media (min-width:1101px) and (max-width:1400px){
+  :root{--lw:280px;--rw:300px}
+  #dataChip{display:none}
+  .topbar .search{max-width:260px}
+  body.ge .sidehead h2{font-size:14px}
+  .sidehead .sub{font-size:12px}
+  .mapctl{gap:6px}
+}
+@media (min-width:1101px) and (max-height:750px){
+  .mission-banner{display:none}
+  .side{bottom:36px}
+  .sidebody{gap:12px}
+  .sidehead{padding:10px 12px}
+}
+
+@media (max-width:1100px),(max-height:600px){
+  :root{--bar:112px;--compact-nav:calc(64px + env(safe-area-inset-bottom,0px))}
+  body.ge{font-size:14px}
+  body.ge .topbar{height:var(--bar);display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:48px 48px;gap:0 16px;padding:8px max(16px,env(safe-area-inset-right)) 8px max(16px,env(safe-area-inset-left))}
+  .topbar .brand{grid-column:1;grid-row:1}
+  .topbar .brand h1{font-size:14px;letter-spacing:.08em}
+  .topbar .brand .logo{width:24px;height:24px}
+  .topbar .search{display:block!important;grid-column:2;grid-row:1;max-width:420px;min-width:0;width:100%;justify-self:end}
+  .search input{height:44px;font-size:16px}
+  .search svg{top:13px}
+  .compact-menu{display:block;grid-column:3;grid-row:1;min-width:66px;height:44px}
+  body.ge .opmode{display:flex;grid-row:2;grid-column:1/-1;justify-self:center;width:min(100%,440px)}
+  body.ge .opmode button{flex:1;min-height:44px;padding:8px 10px;font-size:13px;white-space:nowrap}
+  .topactions{display:none;position:absolute;top:calc(var(--bar) + 8px);left:16px;right:16px;margin:0;padding:12px;background:var(--panel);border:1px solid var(--edge);border-radius:14px;box-shadow:0 12px 28px #0005;flex-wrap:wrap;gap:8px}
+  .compact-menu-open .topactions{display:flex}
+  .topactions .pillbtn,.topactions #btnData{display:inline-flex;align-items:center;justify-content:center;flex:1 1 110px;min-height:44px}
+  #dataChip{display:block;flex:1 1 100%;white-space:normal;font-size:11px;margin-top:4px;text-align:center}
+  .compact-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:fixed;z-index:1100;left:0;right:0;bottom:0;height:var(--compact-nav);padding:8px max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));background:var(--bg);border-top:1px solid var(--edge);gap:4px}
+  .compact-nav button{min-width:0;min-height:44px;border:1px solid transparent;border-radius:10px;background:transparent;font-size:13px;color:var(--muted);padding:6px 2px}
+  .compact-nav button[aria-expanded=true]{background:var(--surface2);border-color:var(--accent);color:var(--fg)}
+  .compact-nav button:hover{color:var(--fg);background:var(--surface2)}
+  body.ge .stage{inset:var(--bar) 0 var(--compact-nav)}
+  body.ge #view-helmet,body.ge #view-telemetry{inset:0;padding:0}
+  body.ge .floating.tl,body.ge.offline .floating.tl{top:12px;max-width:calc(100% - 24px);white-space:nowrap;gap:8px}
+  .floating .ghost{min-height:40px;font-size:12px;padding:6px 14px}
+  .mission-banner,.statusbar,.sidetoggle,.drophint{display:none!important}
+  .cesium-viewer-bottom{bottom:4px!important;max-width:90%;font-size:11px}
+  .leaflet-bottom.leaflet-right{bottom:0}
+  body.ge .side,body.ge .dock,body.ge .compact-tools{display:none;position:fixed;z-index:1000;inset:auto 12px calc(var(--compact-nav) + 10px);width:auto;max-width:560px;max-height:calc(100dvh - var(--bar) - var(--compact-nav) - 24px);margin:0 auto;transform:none;transition:none;border:1px solid var(--edge);border-radius:16px;background:var(--panel);box-shadow:0 10px 30px #0006;overflow:hidden}
+  body.ge .side{height:min(580px,65dvh)}
+  body.ge[data-compact-panel=prepare] #leftPanel,body.ge[data-compact-panel=plan] #rightPanel{display:flex}
+  body.ge[data-compact-panel=simulation] .dock,body.ge[data-compact-panel=tools] .compact-tools{display:flex;flex-direction:column;overflow:auto}
+  .compact-close{display:grid;place-items:center;width:44px;height:44px;min-width:44px;padding:0;background:transparent;color:var(--fg);border:1px solid var(--edge);border-radius:50%;margin-left:auto}
+  .compact-sheet-heading,.compact-tools>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--edge)}
+  .compact-sheet-heading h2,.compact-tools h2{font:500 15px var(--body);color:var(--fg);letter-spacing:0;text-transform:none}
+  .sidehead{padding:12px 16px;gap:8px}
+  body.ge .sidehead h2{font-size:15px}
+  .sidehead .sub{font-size:12px;max-width:32ch}
+  .sidehead .seg{order:3;flex:1 1 100%;display:flex}
+  .sidehead .seg button{flex:1;min-height:40px}
+  .sidebody{padding:16px;font-size:14px;gap:20px}
+  .sidebody label,.sidebody button{min-height:44px}
+  body.ge .stat span{font-size:11px;color:var(--muted);letter-spacing:.06em}
+  .compact-backdrop:not([hidden]){display:block;position:fixed;z-index:950;inset:var(--bar) 0 var(--compact-nav);border:0;background:#0005;padding:0}
+  body.ge .dock .transport{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px 10px;padding:16px;border:0;border-radius:0;box-shadow:none;background:transparent}
+  .transport .tlabel,.transport .tsep{display:none}
+  body.ge .transport #simPlay{width:44px;height:44px;grid-column:1}
+  body.ge .transport #simSlider{grid-column:2;min-width:0;width:100%;height:44px}
+  .transport #simClock{grid-column:3;font-size:14px}
+  body.ge .transport .phase{grid-column:1/3;max-width:none;white-space:normal}
+  .transport #simSpeed{grid-column:3;max-width:112px;min-height:44px;font-size:13px}
+  .transport .tgroup{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+  body.ge .transport .tgroup button{flex:1 1 130px;min-height:44px;white-space:normal;font-size:12px}
+  body.ge .compact-tools .mapctl{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px;transform:none}
+  .compact-tools .mapctl button{width:100%;min-height:48px;border-radius:10px;box-shadow:none}
+  .compact-tools .basepick{position:relative;inset:auto!important;width:auto;height:64px;min-height:64px;margin:0 16px 16px;border-radius:10px;box-shadow:none;transform:none}
+  .compact-tools .basepick span:last-child{font-size:13px;padding:5px}
+  .drawer,.ares{top:calc(var(--bar) + 8px)!important;bottom:auto!important;left:12px!important;right:12px!important;width:auto!important;max-width:680px;margin-inline:auto;max-height:calc(100dvh - var(--bar) - var(--compact-nav) - 20px);transform:none!important;padding:16px;z-index:1500}
+  .drawer header button,.ares header button{min-width:44px;min-height:44px}
+  .ares form{flex-wrap:wrap;padding-inline:0}
+  .ares input{flex:1 1 100%;font-size:16px;min-height:44px}
+  .ares form button{min-height:44px;flex:1}
+  .ares-quick{max-height:100px;overflow:auto;padding-inline:0}
+  .ares-quick button{min-height:44px;font-size:12px}
+  .ares{background:var(--panel);border-color:var(--edge);box-shadow:none}
+  .drawer h2{font-size:16px;overflow-wrap:anywhere}
+  .drawer header{align-items:flex-start}
+  .poilist{grid-template-columns:1fr}
+  .poiacts button{min-height:44px}
+  .modal{padding:12px}
+  .modal-card{max-height:calc(100dvh - 24px);padding:14px}
+  .modal-card header button,.modal-card footer button{min-height:44px;min-width:44px}
+  .offline-badge{max-height:150px;overflow:auto;top:calc(var(--bar) + 8px)!important}
+  body.ge .tele{height:100%;overflow:auto;display:flex;flex-direction:column;padding:16px;gap:16px}
+  .tele .gauges{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tele .charts{grid-template-columns:1fr}
+  .tele-side{min-width:0}
+  /* Keep HUD status legible without covering every edge of the terrain. */
+  .hud-compass{top:8px;width:70%;height:40px}
+  .hud-crew{display:none}
+  .hud-suit{top:62px;right:12px;min-width:0;max-width:170px;padding:8px}
+  .hud-suit .loc{display:none}
+  body.helmet-mode .hud-sols{bottom:12px;width:calc(100% - 24px);gap:6px;max-height:100px;overflow:auto;justify-content:flex-start}
+  .hud-sols button,.hud-sols select{min-height:40px;max-width:100%;font-size:12px}
+  body.helmet-mode .hud-source{bottom:122px;font-size:11px}
+  body.helmet-mode .hud-hint{display:none}
+  body.helmet-mode .hud-target{bottom:146px;max-width:calc(100% - 24px);font-size:11px;white-space:normal}
+  body.helmet-mode .hud-alert{bottom:188px;max-width:calc(100% - 24px)}
+  body.helmet-mode .hud-alert{bottom:16px;max-height:100px;overflow:auto;pointer-events:auto;font-size:12px;line-height:1.5}
+  body.helmet-mode .compact-tools .mapctl,body.helmet-mode .compact-tools .basepick{display:none}
+  body.helmet-mode .compact-helmet-tools{display:flex;flex-direction:column;gap:16px;padding:16px}
+  body.helmet-mode .compact-helmet-tools .hud{position:static;inset:auto;transform:none;width:auto;max-width:none;max-height:none;margin:0;text-shadow:none}
+  body.helmet-mode .compact-helmet-tools .hud-target{border-radius:10px;padding:10px;font-size:13px}
+  body.helmet-mode .compact-helmet-tools .hud-source{font:13px/1.6 var(--body);text-align:left;color:var(--muted)}
+  body.helmet-mode .compact-helmet-tools .hud-sols{display:flex;flex-wrap:wrap;gap:8px;overflow:visible}
+  body.helmet-mode .compact-helmet-tools .hud-sols button,body.helmet-mode .compact-helmet-tools .hud-sols select{min-height:44px}
+  body.helmet-mode .compact-helmet-tools .hud-fx{display:flex;flex-direction:column;gap:8px}
+  body.helmet-mode .compact-helmet-tools .hud-fx button{min-height:44px}
+  body.helmet-mode .compact-helmet-tools .hud-hint{display:block;text-align:left;font:12px/1.5 var(--body)}
+  .exec,body:not(.helmet-mode) .exec{top:calc(var(--bar) + 8px);bottom:auto;left:12px;right:12px;max-height:calc(100dvh - var(--bar) - var(--compact-nav) - 20px);overflow:auto;width:auto;max-width:380px}
+  body[data-compact-panel]:not([data-compact-panel=""]) .exec{visibility:hidden}
+}
+@media (max-width:600px){
+  body.ge .topbar{grid-template-columns:1fr auto;gap:0 8px;padding-inline:12px}
+  .compact-menu{grid-column:2}
+  .topbar .search{display:none!important}
+  .compact-menu-open .topbar .search{display:block!important;position:absolute;grid-column:auto;grid-row:auto;justify-self:stretch;top:calc(var(--bar) + 8px);left:12px;right:12px;width:auto;max-width:none;z-index:2}
+  .compact-menu-open .topactions{top:calc(var(--bar) + 60px);left:12px;right:12px}
+  .compact-nav button{font-size:12px}
+  .topbar .brand h1{font-size:13px;letter-spacing:.12em}
+  .hud-suit{max-width:146px;font-size:11px}
+  .hud-suit .big b{font-size:24px}
+  .hud-suit .row{gap:8px}
+}
+@media (max-height:500px) and (min-width:601px){
+  :root{--bar:60px;--compact-nav:56px}
+  body.ge .topbar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:44px;padding-block:8px}
+  .topbar .search{display:none!important}
+  body.ge .opmode{grid-row:1;grid-column:2;max-width:330px}
+  .compact-menu{grid-column:3}
+  .compact-nav{padding-block:6px}
+  body.ge .side{height:calc(100dvh - var(--bar) - var(--compact-nav) - 24px)}
+  .sidehead .sub{display:none}
+  .sidehead{padding-block:6px}
+  .hud-suit{top:12px}
+  .hud-compass{width:40%}
+}
+
+/* Functional labels must stay readable in the compact panels and on desktop. */
+body.ge h3{font-size:12px;letter-spacing:.08em}
+body.ge .stat span{font-size:11px;letter-spacing:.05em;color:var(--muted)}
+body.ge .status .pill,body.ge .sidehead .step,body.ge .transport .tlabel,
+body.ge .squad-title,body.ge .hud-suit .big span,body.ge .hud-drive .big span,
+body.ge .tape span,body.ge .prov-badge,body.ge .exec-sim,body.ge .p360-kind,
+body.ge .mission-banner b,body.ge .mission-banner span{font-size:11px;letter-spacing:.04em}
+body.ge .gauge small,body.ge .gauge span,body.ge .chead em,
+body.ge .meda span,body.ge .crew small,body.ge .hud-suit .loc,
+body.ge .hud-site small,body.ge .modal-card header small,body.ge .modal-card .facts span,
+body.ge .ares li small,body.ge .prov,body.ge .basepick span:last-child{font-size:12px;line-height:1.5}
+body.ge .prov-badge{white-space:normal}
+body.ge .gauge span{min-height:3em}
+body.ge .basepick{min-width:72px}
+body.ge .cesium-credit-expand-link,body.ge .cesium-widget-credits,
+body.ge .leaflet-control-attribution{font-size:11px!important}

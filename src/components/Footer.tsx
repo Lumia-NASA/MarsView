@@ -1,6 +1,6 @@
-import { ArrowUpRight, Github, Orbit } from "lucide-react";
+import { ArrowUpRight, Github } from "lucide-react";
 import { Brand } from "./Brand";
-import { links, repositoryUrl } from "../lib/config";
+import { dashboardPath, links, repositoryUrl } from "../lib/config";
 
 export function Footer() {
   return (
@@ -19,8 +19,8 @@ export function Footer() {
         <div className="flex flex-wrap gap-x-12 gap-y-5">
           <div className="flex flex-col">
             <span className="mb-3 text-xs font-medium">Explore</span>
-            <a className="quiet-link" href="#explorer">
-              Interactive map
+            <a className="quiet-link" href={dashboardPath}>
+              Dashboard
               <ArrowUpRight size={13} />
             </a>
             <a className="quiet-link" href="#regions">
@@ -62,10 +62,6 @@ export function Footer() {
               {repositoryUrl ? "MarsView source code" : "NASA open source"}
               <ArrowUpRight size={13} />
             </a>
-            <span className="mt-4 flex items-center gap-2 rounded-full border border-white/10 px-3 py-2 font-mono text-[9px] text-muted">
-              <Orbit size={13} className="text-copper" />
-              REACT + THREE.JS + TAILWIND
-            </span>
             <a
               className="quiet-link mt-2"
               href={links.api}
@@ -92,9 +88,13 @@ export function Footer() {
           <br className="sm:hidden" />
           <span className="hidden sm:inline"> · </span>Imagery:
           NASA/JPL-Caltech/ASU/MSSS.
+          <br />
+          Music: <a className="underline underline-offset-4 hover:text-paper" href="https://www.scottbuckley.com.au/library/decoherence/" target="_blank" rel="noreferrer">Decoherence — Scott Buckley</a>{" "}
+          · <a className="underline underline-offset-4 hover:text-paper" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a> · Edited for looping.
         </p>
       </div>
       <div
+        data-scroll-wordmark
         aria-hidden="true"
         className="overflow-hidden border-t border-white/[.04] pt-5 text-center text-[clamp(2.8rem,12.7vw,10.5rem)] leading-none font-light tracking-[.18em] text-white/[.045]"
       >

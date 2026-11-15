@@ -1,25 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  demoReading,
-  isStale,
   parseTelemetry,
   type TelemetryReading,
 } from "../lib/telemetry";
 
 export function useTelemetry() {
-  const endpoint = import.meta.env.VITE_TELEMETRY_URL?.trim();
-  const [reading, setReading] = useState<TelemetryReading | null>(
-    endpoint ? null : demoReading,
-  );
-  const [loading, setLoading] = useState(Boolean(endpoint));
+  const endpoint =
+    import.meta.env.VITE_TELEMETRY_URL?.trim() || "/api/mars-weather";
+  const [reading, setReading] = useState<TelemetryReading | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [clock, setClock] = useState(Date.now());
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const current = useRef<AbortController | null>(null);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
   useEffect(() => {
-    if (!endpoint) return;
     let alive = true;
     const update = async () => {
       if (document.hidden) return;
@@ -39,7 +35,7 @@ export function useTelemetry() {
         if (alive && current.current === controller) {
           setReading(result);
           setError(null);
-          setClock(Date.now());
+          setCheckedAt(new Date().toISOString());
         }
       } catch {
         if (alive && current.current === controller)
@@ -52,7 +48,7 @@ export function useTelemetry() {
       }
     };
     void update();
-    const interval = window.setInterval(() => void update(), 60000);
+    const interval = window.setInterval(() => void update(), 30 * 60 * 1000);
     const visibility = () => {
       if (!document.hidden) void update();
     };
@@ -65,17 +61,11 @@ export function useTelemetry() {
     };
   }, [endpoint, revision]);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => setClock(Date.now()), 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   return {
     reading,
     loading,
     error,
     refresh,
-    isDemo: !endpoint,
-    stale: reading ? isStale(reading, clock) : false,
+    checkedAt,
   };
 }

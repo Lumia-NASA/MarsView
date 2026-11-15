@@ -42,14 +42,14 @@ export function PlanetAtlas() {
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 left-1/2 size-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-copper/[.08] animate-[spin_60s_linear_infinite]"
+        className="pointer-events-none absolute top-1/2 left-1/2 size-[680px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-copper/[.08]"
       />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute top-1/2 left-1/2 size-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-white/[.08]"
       />
       <div className="page-width relative">
-        <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-end">
+        <div data-scroll-heading className="grid gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-end">
           <div>
             <p className="technical text-copper">
               <ScrambleText text="Planetary baseline" />

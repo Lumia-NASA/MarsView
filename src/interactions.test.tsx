@@ -10,12 +10,22 @@ vi.mock("./components/MarsGlobe", () => ({
     zoom = 1,
     grid,
     region,
+    paused = false,
+    allowMotion = false,
   }: {
     zoom?: number;
     grid?: boolean;
     region?: { name: string };
+    paused?: boolean;
+    allowMotion?: boolean;
   }) => (
-    <div data-testid="globe" data-zoom={zoom} data-grid={grid}>
+    <div
+      data-testid="globe"
+      data-zoom={zoom}
+      data-grid={grid}
+      data-paused={paused}
+      data-motion-enabled={allowMotion}
+    >
       {region?.name}
     </div>
   ),
@@ -34,6 +44,7 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
     })),
   });
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
   window.scrollTo = vi.fn();
   Element.prototype.scrollIntoView = vi.fn();
   container = document.createElement("div");
@@ -54,7 +65,25 @@ async function click(selector: string) {
   await act(async () => element!.click());
 }
 
-describe("landing and explorer interactions", () => {
+describe("landing interactions", () => {
+  it("keeps hero motion active without pause or motion toggles", async () => {
+    vi.mocked(window.matchMedia).mockImplementation(
+      (query) =>
+        ({
+          matches: query.includes("prefers-reduced-motion"),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        }) as unknown as MediaQueryList,
+    );
+    await act(async () => root.render(<App />));
+    const globe = container.querySelector('#home [data-testid="globe"]');
+    expect(globe?.getAttribute("data-paused")).toBe("false");
+    expect(globe?.getAttribute("data-motion-enabled")).toBe("true");
+    expect(
+      container.querySelector('[aria-label="Pause globe rotation"]'),
+    ).toBeNull();
+    expect(container.querySelector(".experience-toggle")).toBeNull();
+  });
   it("opens and closes mobile navigation with accessible state", async () => {
     await act(async () => root.render(<App />));
     await click('[aria-label="Open navigation"]');
@@ -82,51 +111,18 @@ describe("landing and explorer interactions", () => {
         ?.getAttribute("aria-pressed"),
     ).toBe("true");
   });
-  it("loads explorer, selects a region, zooms, resets, and preserves skip-link navigation", async () => {
+  it("keeps dashboard links without rendering the removed explorer", async () => {
     await act(async () => root.render(<App />));
+    expect(container.querySelectorAll('a[href="/dashboard/"]').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('a[href^="#explorer"]')).toHaveLength(0);
     await act(async () => {
       window.history.pushState(null, "", "#explorer/olympus");
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
-      await import("./components/Explorer");
-    });
-    await vi.waitFor(() =>
-      expect(container.querySelector('[data-testid="globe"]')).not.toBeNull(),
-    );
-    expect(container.querySelector('[data-testid="globe"]')?.textContent).toBe(
-      "Olympus Mons",
-    );
-    await click('input[value="olympus"]');
-    expect(container.querySelector('[data-testid="globe"]')?.textContent).toBe(
-      "Olympus Mons",
-    );
-    await click('[aria-label="Zoom in"]');
-    expect(
-      container
-        .querySelector('[data-testid="globe"]')
-        ?.getAttribute("data-zoom"),
-    ).toBe("1.15");
-    await click('[aria-label="Toggle coordinate mesh"]');
-    expect(
-      container
-        .querySelector('[data-testid="globe"]')
-        ?.getAttribute("data-grid"),
-    ).toBe("false");
-    await click('[aria-label="Reset globe view"]');
-    expect(
-      container
-        .querySelector('[data-testid="globe"]')
-        ?.getAttribute("data-zoom"),
-    ).toBe("1");
-    await click('a[href="#main"]');
-    expect(window.location.hash).toBe("#explorer/olympus");
-    expect(document.activeElement?.id).toBe("main");
-    await act(async () => {
-      window.history.pushState(null, "", "#home");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
     expect(container.querySelector("#hero-title")?.textContent).toBe(
       "MARSVIEW",
     );
+    expect(document.title).toBe("MarsView — A new perspective on Mars");
   });
 });
 
@@ -139,8 +135,7 @@ function TelemetryProbe() {
           reading: state.reading,
           error: state.error,
           loading: state.loading,
-          isDemo: state.isDemo,
-          stale: state.stale,
+          checkedAt: state.checkedAt,
         })}
       </output>
       <button onClick={state.refresh}>Refresh</button>
@@ -150,39 +145,68 @@ function TelemetryProbe() {
 const readState = () =>
   JSON.parse(container.querySelector("output")!.textContent!);
 
+const nasaFeed = {
+  soles: [
+    {
+      sol: "4995",
+      terrestrial_date: "2026-08-25",
+      min_temp: "-71",
+      max_temp: "-5",
+      min_gts_temp: "-84",
+      max_gts_temp: "4",
+      pressure: "777",
+    },
+  ],
+};
+
 describe("telemetry lifecycle", () => {
-  it("does not make a network request in demo mode", async () => {
+  it("fetches real NASA data by default without a key", async () => {
     vi.stubEnv("VITE_TELEMETRY_URL", "");
-    const fetcher = vi.fn();
-    vi.stubGlobal("fetch", fetcher);
-    await act(async () => root.render(<TelemetryProbe />));
-    expect(fetcher).not.toHaveBeenCalled();
-    expect(readState().isDemo).toBe(true);
-  });
-  it("retains the last sourced reading after a failed refresh", async () => {
-    vi.stubEnv("VITE_TELEMETRY_URL", "/api/telemetry");
-    const reading = {
-      temperatureC: -60,
-      pressurePa: 620,
-      latitude: 18,
-      longitude: 77,
-      sol: 1000,
-      source: "Verified source",
-      sourceUrl: "https://science.nasa.gov/mars/",
-      observedAt: "2020-01-01T00:00:00Z",
-    };
     const fetcher = vi
       .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => reading })
+      .mockResolvedValue({ ok: true, json: async () => nasaFeed });
+    vi.stubGlobal("fetch", fetcher);
+    await act(async () => root.render(<TelemetryProbe />));
+    expect(fetcher.mock.calls[0][0]).toBe(
+      "/api/mars-weather",
+    );
+    expect(readState().reading.sol).toBe(4995);
+    expect(readState().checkedAt).not.toBeNull();
+  });
+  it("retains the last sourced reading and its date after a failed refresh", async () => {
+    vi.stubEnv("VITE_TELEMETRY_URL", "/api/telemetry");
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => nasaFeed })
       .mockRejectedValueOnce(new Error("offline"));
     vi.stubGlobal("fetch", fetcher);
     await act(async () => root.render(<TelemetryProbe />));
-    expect(readState().reading.temperatureC).toBe(-60);
-    expect(readState().stale).toBe(true);
+    const before = readState();
     await click("button");
     expect(readState().error).toContain("could not be refreshed");
-    expect(readState().reading.source).toBe("Verified source");
-    expect(readState().isDemo).toBe(false);
+    expect(readState().reading).toEqual(before.reading);
+    expect(readState().checkedAt).toBe(before.checkedAt);
     expect(readState().loading).toBe(false);
+  });
+  it("shows no invented fallback when the initial request fails and allows retry", async () => {
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ ok: true, json: async () => nasaFeed });
+    vi.stubGlobal("fetch", fetcher);
+    await act(async () => root.render(<TelemetryProbe />));
+    expect(readState().reading).toBeNull();
+    expect(readState().error).toBeTruthy();
+    await click("button");
+    expect(readState().reading.pressurePa).toBe(777);
+    expect(readState().error).toBeNull();
+  });
+  it("aborts a pending request on unmount", async () => {
+    const fetcher = vi.fn().mockImplementation(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetcher);
+    await act(async () => root.render(<TelemetryProbe />));
+    const signal = fetcher.mock.calls[0][1].signal;
+    await act(async () => root.render(<div />));
+    expect(signal.aborted).toBe(true);
   });
 });

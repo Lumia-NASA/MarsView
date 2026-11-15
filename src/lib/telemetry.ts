@@ -1,79 +1,77 @@
+export const NASA_WEATHER_URL =
+  "https://mars.nasa.gov/rss/api/?feed=weather&category=msl&feedtype=json";
+
 export interface TelemetryReading {
-  temperatureC: number;
-  pressurePa: number;
-  latitude: number;
-  longitude: number;
+  airMinC: number | null;
+  airMaxC: number | null;
+  groundMinC: number | null;
+  groundMaxC: number | null;
+  pressurePa: number | null;
   sol: number;
   observedAt: string;
-  source: string;
-  sourceUrl: string;
 }
 
-export const demoReading: TelemetryReading = {
-  temperatureC: -63.4,
-  pressurePa: 610,
-  latitude: 18.4446,
-  longitude: 77.4509,
-  sol: 428,
-  observedAt: "2026-01-01T12:00:00Z",
-  source: "MarsView demonstration",
-  sourceUrl: "",
-};
+function measurement(value: unknown, min: number, max: number): number | null {
+  if (value == null || value === "--" || value === "") return null;
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && !/^-?\d+(\.\d+)?$/.test(value.trim()))
+    return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= min && number <= max
+    ? number
+    : null;
+}
 
+// Preserve missing fields in the newest sol; never borrow older measurements.
 export function parseTelemetry(input: unknown): TelemetryReading {
-  if (!input || typeof input !== "object")
-    throw new Error("The telemetry response is not an object.");
-  const data = input as Record<string, unknown>;
-  const ranges: Record<string, [number, number]> = {
-    temperatureC: [-160, 50],
-    pressurePa: [0, 2000],
-    latitude: [-90, 90],
-    longitude: [-180, 180],
-    sol: [0, 100000],
-  };
-  for (const [field, [min, max]] of Object.entries(ranges)) {
-    const value = data[field];
+  if (
+    !input ||
+    typeof input !== "object" ||
+    !("soles" in input) ||
+    !Array.isArray(input.soles)
+  )
+    throw new Error("Invalid NASA REMS response.");
+  let latest: TelemetryReading | null = null;
+  for (const row of input.soles) {
+    if (!row || typeof row !== "object") continue;
+    const sol = measurement(row.sol, 0, 100000);
+    const date = row.terrestrial_date;
     if (
-      typeof value !== "number" ||
-      !Number.isFinite(value) ||
-      value < min ||
-      value > max
+      sol === null ||
+      !Number.isInteger(sol) ||
+      typeof date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date)
     )
-      throw new Error(`Invalid telemetry field: ${field}.`);
+      continue;
+    const time = Date.parse(date);
+    if (
+      !Number.isFinite(time) ||
+      new Date(time).toISOString().slice(0, 10) !== date ||
+      time > Date.now()
+    )
+      continue;
+    if (latest && latest.sol >= sol) continue;
+    const airMinC = measurement(row.min_temp, -160, 60);
+    const airMaxC = measurement(row.max_temp, -160, 60);
+    const groundMinC = measurement(row.min_gts_temp, -160, 80);
+    const groundMaxC = measurement(row.max_gts_temp, -160, 80);
+    const airInvalid =
+      airMinC !== null && airMaxC !== null && airMinC > airMaxC;
+    const groundInvalid =
+      groundMinC !== null && groundMaxC !== null && groundMinC > groundMaxC;
+    latest = {
+      airMinC: airInvalid ? null : airMinC,
+      airMaxC: airInvalid ? null : airMaxC,
+      groundMinC: groundInvalid ? null : groundMinC,
+      groundMaxC: groundInvalid ? null : groundMaxC,
+      pressurePa: measurement(row.pressure, 1, 2000),
+      sol,
+      observedAt: date,
+    };
   }
-  if (!Number.isInteger(data.sol))
-    throw new Error("The mission sol must be an integer.");
-  if (
-    typeof data.observedAt !== "string" ||
-    !Number.isFinite(Date.parse(data.observedAt)) ||
-    Date.parse(data.observedAt) > Date.now() + 300000
-  )
-    throw new Error("Invalid observation timestamp.");
-  if (
-    typeof data.source !== "string" ||
-    !data.source.trim() ||
-    data.source.length > 120
-  )
-    throw new Error("Missing observation source.");
-  if (typeof data.sourceUrl !== "string")
-    throw new Error("Missing source URL.");
-  const sourceUrl = new URL(data.sourceUrl);
-  if (sourceUrl.protocol !== "https:")
-    throw new Error("The source URL must use HTTPS.");
-  return {
-    temperatureC: data.temperatureC as number,
-    pressurePa: data.pressurePa as number,
-    latitude: data.latitude as number,
-    longitude: data.longitude as number,
-    sol: data.sol as number,
-    observedAt: data.observedAt,
-    source: data.source,
-    sourceUrl: sourceUrl.href,
-  };
-}
-
-export function isStale(reading: TelemetryReading, now = Date.now()) {
-  return now - Date.parse(reading.observedAt) > 15 * 60 * 1000;
+  if (!latest)
+    throw new Error("No dated NASA REMS observations were returned.");
+  return latest;
 }
 
 export function coordinate(value: number, axis: "latitude" | "longitude") {

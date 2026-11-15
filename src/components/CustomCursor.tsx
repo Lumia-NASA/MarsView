@@ -71,7 +71,7 @@ export function CustomCursor() {
 
     const loop = () => {
       // Spring lerp for outer ring (responsivo e ágil com metade da latência anterior)
-      const ease = 0.36;
+      const ease = 0.42;
       ringX += (mouseX - ringX) * ease;
       ringY += (mouseY - ringY) * ease;
 
@@ -107,29 +107,27 @@ export function CustomCursor() {
       {/* Inner sharp dot (bolinha) */}
       <div
         ref={dotRef}
-        className={`absolute top-0 left-0 rounded-full transition-all duration-200 ${
-          mode === "drag"
+        className={`absolute top-0 left-0 rounded-full transition-all duration-200 ${mode === "drag"
             ? "size-1.5 bg-void opacity-0"
             : isDown
               ? "size-3 bg-copper opacity-90"
               : mode === "hover"
                 ? "size-2.5 bg-copper opacity-100 shadow-[0_0_12px_#e99c72]"
                 : "size-2 bg-copper opacity-100 shadow-[0_0_8px_#e99c72]"
-        }`}
+          }`}
       />
 
       {/* Outer fluid trailing ring */}
       <div
         ref={ringRef}
-        className={`absolute top-0 left-0 flex items-center justify-center rounded-full transition-all duration-300 ease-out ${
-          mode === "drag"
+        className={`absolute top-0 left-0 flex items-center justify-center rounded-full transition-all duration-300 ease-out ${mode === "drag"
             ? "h-12 w-20 border border-copper/60 bg-copper/90 font-mono text-[9px] font-bold tracking-[.18em] text-void shadow-[0_0_24px_rgba(233,156,114,0.4)] backdrop-blur-md"
             : mode === "hover"
               ? "size-12 border border-copper/60 bg-copper/[.08] shadow-[0_0_20px_rgba(233,156,114,0.25)]"
               : isDown
                 ? "size-6 border border-copper/70 bg-copper/20"
                 : "size-8 border border-white/25 bg-white/[.02]"
-        }`}
+          }`}
       >
         {mode === "drag" && (
           <span className="flex items-center gap-1 uppercase">

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 
 const items = [
-  "SOL 428 · DEMO SEQUENCE",
+  "CURIOSITY · GALE CRATER",
   "PERSEVERANCE · JEZERO CRATER",
   "OLYMPUS MONS · SHIELD VOLCANO",
   "ORBIT TO SURFACE · A NEW PERSPECTIVE",

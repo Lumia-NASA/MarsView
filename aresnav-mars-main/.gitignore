@@ -1,0 +1,33 @@
+# Dependências
+node_modules/
+dist/
+build/
+
+# Skills e Prompts Confidenciais da Equipe Lumia
+.skills-local/
+.vault/
+
+# Segredos e Variáveis de Ambiente
+.env
+.env.*
+!.env.example
+/backend/team.env
+
+# Logs e Telemetria Local
+*.log
+logs/
+npm-debug.log*
+
+# Cache de Telemetria NASA (mantido local para offline)
+data/cache/*.tmp
+backend/data/cache/tiles/
+backend/data/cache/navcam/
+backend/data/cache/dem/
+backend/data/cache/fubpano/
+backend/data/cache/hirise/
+
+# Arquivos de Sistema e IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

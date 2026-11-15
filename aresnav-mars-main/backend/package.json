@@ -1,0 +1,30 @@
+{
+  "name": "aresnav-backend",
+  "version": "1.0.0",
+  "description": "AresNav NASA Data Extractor & Telemetry Hub - Space Apps Hackathon",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node ../tests/smoke-test.js && node ../tests/physics-test.js && node ../tests/sun-test.js && node ../tests/exec-test.js && node ../tests/calc-test.js && node ../tests/hirise-test.js && node ../tests/fub-test.js && node ../tests/demo-flow-test.js",
+    "prewarm": "node ../tools/prewarm-demo.js",
+    "check-offline": "node ../tools/prewarm-demo.js --check"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@fastify/compress": "^9.3.0",
+    "@fastify/cors": "^11.4.3",
+    "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.2.2",
+    "@fastify/static": "^10.1.11",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.12.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.17.0"
+  }
+}

@@ -1,26 +1,22 @@
 import {
   ArrowUpRight,
-  ChevronRight,
-  Crosshair,
   Focus,
-  Layers3,
   Radio,
   Route,
 } from "lucide-react";
-import { useState } from "react";
-import { links } from "../lib/config";
+import { dashboardPath, links } from "../lib/config";
 import { TiltCard } from "./TiltCard";
 import { ScrambleText } from "./ScrambleText";
+import { PanoramaViewer360 } from "./PanoramaViewer360";
 
 export function Features() {
-  const [surface, setSurface] = useState(false);
   return (
     <section
       id="capabilities"
       aria-labelledby="capabilities-title"
       className="page-width py-24 sm:py-28 lg:flex lg:min-h-[900px] lg:flex-col lg:justify-center"
     >
-      <div className="mb-12 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      <div data-scroll-heading className="mb-12 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <h2
           id="capabilities-title"
           className="max-w-[600px] text-[32px] leading-[1.2] font-light tracking-[-.035em] sm:text-5xl"
@@ -35,79 +31,43 @@ export function Features() {
         </p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.15fr_1fr] lg:grid-rows-[252px_252px]">
-        {/* Large Feature Card with 3D Tilt */}
+      <div data-scroll-surface className="grid gap-5 lg:grid-cols-[1.35fr_1fr] lg:grid-rows-[290px_290px]">
+        {/* Large Feature Card with 360° Interactive Panorama & Adaptive Zoom Lever */}
         <TiltCard
-          cursorMode="explore"
-          className="glass-panel group relative flex min-h-[520px] flex-col overflow-hidden transition duration-300 hover:border-copper/40 lg:row-span-2"
+          maxTilt={4}
+          className="glass-panel group relative flex min-h-[580px] flex-col overflow-hidden transition duration-300 hover:border-copper/40 lg:row-span-2"
         >
-          <div className="relative z-10 flex items-center justify-between px-7 pt-7">
+          <div className="relative z-10 flex items-center justify-between px-7 pt-7 pb-4">
             <Focus className="text-copper" size={23} strokeWidth={1.3} />
             <span className="technical text-muted">
               <ScrambleText text="Scale without limits" />
             </span>
           </div>
-          <div className="relative flex min-h-[250px] flex-1 items-center justify-center overflow-hidden">
-            <img
-              src="/images/jezero-panorama.jpg"
-              alt="Rocky terrain at Jezero Crater, photographed by Perseverance's Mastcam-Z"
-              loading="lazy"
-              width="1600"
-              height="600"
-              className={`absolute inset-0 h-full w-full object-cover transition-transform duration-1000 ease-out ${
-                surface ? "scale-150 rotate-1" : "scale-100 rotate-0"
-              }`}
-            />
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-b from-[#0e0d0c] via-transparent to-[#0e0d0c]"
-            />
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-r from-void/35 to-transparent"
-            />
-            <div className="absolute top-12 left-7 font-mono text-[10px] text-paper/80">
-              <ScrambleText text="JEZERO / MASTCAM-Z" />
-              <br />
-              <span className="text-copper font-semibold">
-                {surface ? "SURFACE DETAIL" : "PANORAMIC VIEW"}
+
+          {/* Interactive 360° Mastcam-Z Panorama with Adaptive Zoom */}
+          <div className="relative flex min-h-[340px] flex-1 overflow-hidden border-y border-white/10 bg-void">
+            <PanoramaViewer360 className="h-full w-full" />
+          </div>
+
+          <div className="relative z-10 px-7 pt-5 pb-7">
+            <div className="flex items-center gap-2">
+              <span className="technical text-copper font-medium">
+                MASTCAM-Z 360° MOSAIC
               </span>
             </div>
-            <div
-              aria-hidden="true"
-              className="relative flex size-32 items-center justify-center rounded-full border border-white/20 transition-transform duration-700 group-hover:scale-110"
-            >
-              <div className="size-24 rounded-full border border-dashed border-white/30 animate-[spin_30s_linear_infinite]" />
-              <Crosshair
-                className="absolute size-5 text-paper/80"
-                strokeWidth={1}
-              />
-            </div>
-            <button
-              onClick={() => setSurface(!surface)}
-              aria-pressed={surface}
-              data-cursor="hover"
-              className="absolute right-5 bottom-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 bg-void/70 px-4 text-[10px] backdrop-blur-lg transition-colors hover:border-copper/60 hover:text-copper"
-            >
-              <Layers3 size={13} />
-              {surface ? "Return to panorama" : "Inspect the surface"}
-              <ChevronRight size={13} />
-            </button>
-          </div>
-          <div className="relative px-7 pt-4 pb-7">
-            <h3 className="text-2xl font-medium tracking-[-.025em]">
+            <h3 className="mt-2 text-2xl font-medium tracking-[-.025em]">
               Atmospheric Zoom
             </h3>
-            <p className="mt-3 max-w-[380px] text-[13px] leading-6 text-muted">
-              A closer look, from orbital context to the dust of Jezero.
-              Discover the surface behind the coordinates.
+            <p className="mt-2.5 max-w-[420px] text-[13px] leading-relaxed text-muted">
+              A closer look, from orbital context to the rocks of Jezero.
+              Drag sideways to rotate 360°, move the lever to zoom, and pan vertically to examine terrain details.
             </p>
             <a
-              href="#explorer"
-              data-cursor="explore"
-              className="quiet-link mt-4 text-copper"
+              href={dashboardPath}
+              data-cursor="hover"
+              className="quiet-link mt-3.5 text-copper font-medium"
             >
-              Explore the globe
+              Open dashboard
               <ArrowUpRight size={14} />
             </a>
           </div>
@@ -115,10 +75,9 @@ export function Features() {
 
         {/* Rover Routing Feature Card */}
         <TiltCard
-          cursorMode="explore"
           className="glass-panel group relative min-h-[290px] overflow-hidden transition duration-300 hover:border-copper/40 lg:min-h-0"
         >
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-[58%] bg-[url('/images/mars-color.jpg')] bg-[length:800px] bg-[position:30%_60%] opacity-20 [mask-image:linear-gradient(to_right,transparent,black)] transition-transform duration-700 group-hover:scale-105" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[58%] bg-[url('/images/mars-color.jpg')] bg-[length:800px] bg-[position:30%_60%] opacity-20 [mask-image:linear-gradient(to_right,transparent,black)] transition-transform duration-700 group-hover:scale-[1.025]" />
           <svg
             aria-hidden="true"
             className="absolute top-6 right-2 h-[210px] w-[230px] text-copper opacity-35 transition-opacity duration-500 group-hover:opacity-75 sm:opacity-60"
@@ -148,7 +107,6 @@ export function Features() {
               r="12"
               stroke="currentColor"
               opacity=".3"
-              className="animate-ping"
             />
           </svg>
           <div className="relative z-10 flex h-full flex-col items-start p-7">
@@ -169,14 +127,13 @@ export function Features() {
           </div>
         </TiltCard>
 
-        {/* Real-time Telemetry Feature Card */}
+        {/* Published NASA observations */}
         <TiltCard
-          cursorMode="explore"
           className="glass-panel group relative min-h-[275px] overflow-hidden transition duration-300 hover:border-copper/40 lg:min-h-0"
         >
           <div
             aria-hidden="true"
-            className="absolute -top-16 -right-12 size-72 rounded-full bg-copper/[.07] blur-3xl animate-[pulse_5s_ease-in-out_infinite]"
+            className="absolute -top-16 -right-12 size-72 rounded-full bg-copper/[.07] blur-3xl"
           />
           <div
             aria-hidden="true"
@@ -195,19 +152,18 @@ export function Features() {
           <div className="relative p-7">
             <Radio size={22} className="text-copper" strokeWidth={1.3} />
             <h3 className="mt-6 max-w-64 text-[22px] leading-snug font-medium tracking-[-.025em]">
-              Real-time NASA
+              NASA mission
               <br />
-              Telemetry
+              observations
             </h3>
             <p className="mt-3 max-w-[300px] text-xs leading-6 text-muted">
-              A window into mission measurements and rover imagery. Trace every
-              reading to its source.
+              Real Curiosity weather observations, with their measurement date
+              and original source. Published summaries, not a live feed.
             </p>
             <a
               href={links.images}
               target="_blank"
               rel="noreferrer"
-              data-cursor="view"
               className="quiet-link mt-1 text-copper"
             >
               Browse rover images

@@ -1,23 +1,36 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { createMarsInterior } from "../lib/marsInterior";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import type { Region } from "../lib/config";
-import { sound } from "../lib/sound";
+
+export interface GlobeMotion {
+  zoom: number;
+  explosion: number;
+  orientation?: number;
+  hold?: boolean;
+  requestRender?: () => void;
+}
 
 export interface MarsGlobeProps {
   paused?: boolean;
+  allowMotion?: boolean;
   zoom?: number;
   grid?: boolean;
   region?: Region;
   className?: string;
+  onReady?: () => void;
+  motion?: RefObject<GlobeMotion>;
 }
 
-/** Lusion-grade 3D Interactive Mars Globe with Atmosphere Shaders, Cosmic Particle Swarm, and Inertia Physics */
 export default function MarsGlobe({
   paused = false,
+  allowMotion = false,
   zoom = 1,
   grid = false,
   region,
   className = "",
+  onReady,
+  motion,
 }: MarsGlobeProps) {
   const host = useRef<HTMLDivElement>(null);
   const api = useRef<{
@@ -25,12 +38,16 @@ export default function MarsGlobe({
     start: () => void;
   } | null>(null);
   const reduced = useReducedMotion();
-  const settings = useRef({ paused, zoom, grid, reduced });
-  settings.current = { paused, zoom, grid, reduced };
-  const initialRegion = useRef(region);
+  const settings = useRef({ paused, zoom, grid, reduced, allowMotion });
+  settings.current = { paused, zoom, grid, reduced, allowMotion };
+  const selectedRegion = useRef(region);
+  selectedRegion.current = region;
+  const readyCallback = useRef(onReady);
+  readyCallback.current = onReady;
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">(
     "loading",
   );
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const mount = host.current;
@@ -41,266 +58,219 @@ export default function MarsGlobe({
     import("../lib/three")
       .then((THREE) => {
         if (disposed) return;
-        let renderer: InstanceType<typeof THREE.WebGLRenderer>;
-        try {
-          renderer = new THREE.WebGLRenderer({
-            alpha: true,
-            antialias: true,
-            powerPreference: "high-performance",
-          });
-        } catch {
-          setStatus("fallback");
-          return;
-        }
-
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        const renderer = new THREE.WebGLRenderer({
+          alpha: true,
+          antialias: true,
+          powerPreference: "default",
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.setClearColor(0x000000, 0);
-        mount.appendChild(renderer.domElement);
         renderer.domElement.setAttribute("aria-hidden", "true");
+        renderer.domElement.style.width = "100%";
+        renderer.domElement.style.height = "100%";
+        mount.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-        camera.position.z = 4.5;
-
-        // Dynamic Lighting
-        const ambient = new THREE.AmbientLight(0xe3b9a5, 1.3);
-        scene.add(ambient);
-
-        const sunlight = new THREE.DirectionalLight(0xffe2c4, 3.4);
-        sunlight.position.set(-3, 2.2, 3);
-        scene.add(sunlight);
-
-        const rim = new THREE.DirectionalLight(0xb85837, 1.8);
-        rim.position.set(4, -1, -2);
+        const camera = motion
+          ? new THREE.OrthographicCamera(-1.15, 1.15, 1.15, -1.15, 0.1, 100)
+          : new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+        camera.position.z = motion ? 8 : 3.65;
+        scene.add(new THREE.AmbientLight(0xdfe5f2, 1.2));
+        const sun = new THREE.DirectionalLight(0xffeee0, 2.5);
+        sun.position.set(-3, 2, 3);
+        scene.add(sun);
+        const rim = new THREE.DirectionalLight(0xc8d4e5, 1.1);
+        rim.position.set(3, -1, -2);
         scene.add(rim);
 
-        // Sub-light for bottom reflection
-        const bounce = new THREE.DirectionalLight(0xe99c72, 0.6);
-        bounce.position.set(0, -3, 1);
-        scene.add(bounce);
-
-        // Root container for parallax tilt
-        const rootGroup = new THREE.Group();
-        scene.add(rootGroup);
-
         const globe = new THREE.Group();
-        rootGroup.add(globe);
-
-        // Core Mars Sphere
-        const geometry = new THREE.SphereGeometry(1, 96, 64);
+        scene.add(globe);
         const material = new THREE.MeshStandardMaterial({
           color: 0xffffff,
-          roughness: 0.95,
-          metalness: 0.05,
+          roughness: 0.96,
+          metalness: 0,
+          side: THREE.DoubleSide,
         });
-        const sphere = new THREE.Mesh(geometry, material);
-        globe.add(sphere);
-
-        // Texture Loading
-        let texture: InstanceType<typeof THREE.Texture> | undefined;
-        new THREE.TextureLoader().load(
-          "/images/mars-color.jpg",
-          (loaded) => {
-            if (disposed) {
-              loaded.dispose();
-              return;
-            }
-            texture = loaded;
-            loaded.colorSpace = THREE.SRGBColorSpace;
-            loaded.anisotropy = Math.min(
-              4,
-              renderer.capabilities.getMaxAnisotropy(),
-            );
-            material.map = loaded;
-            material.needsUpdate = true;
-            setStatus("ready");
-            draw();
-          },
-          undefined,
-          () => {
-            if (!disposed) setStatus("fallback");
-          },
-        );
-
-        // Volumetric Atmospheric Glow Shader (Fresnel Corona)
-        const atmosphereGeo = new THREE.SphereGeometry(1.18, 64, 48);
-        const atmosphereMat = new THREE.ShaderMaterial({
-          vertexShader: `
-            varying vec3 vNormal;
-            varying vec3 vPosition;
-            void main() {
-              vNormal = normalize(normalMatrix * normal);
-              vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
+        material.onBeforeCompile = (shader) => {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <map_fragment>",
+            `#include <map_fragment>
+            float terrainLight = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+            vec3 mineralShadows = vec3(0.055, 0.062, 0.082) * (0.6 + terrainLight * 3.0);
+            vec3 dustySurface = diffuseColor.rgb * vec3(0.85, 1.12, 1.32);
+            diffuseColor.rgb = mix(mineralShadows, dustySurface, smoothstep(0.035, 0.22, terrainLight));
           `,
-          fragmentShader: `
-            varying vec3 vNormal;
-            varying vec3 vPosition;
-            uniform vec3 uColor;
-            uniform float uTime;
-            void main() {
-              vec3 normal = normalize(vNormal);
-              vec3 viewDir = normalize(-vPosition);
-              float dotNV = dot(normal, viewDir);
-              float fresnel = pow(1.0 - abs(dotNV), 3.2);
-              float pulse = 0.88 + 0.12 * sin(uTime * 1.8);
-              gl_FragColor = vec4(uColor, fresnel * 0.72 * pulse);
-            }
-          `,
-          uniforms: {
-            uTime: { value: 0 },
-            uColor: { value: new THREE.Color(0xe99c72) },
-          },
+          );
+        };
+        const interior = motion ? createMarsInterior(THREE, material) : null;
+        const surfaceGeometry = new THREE.SphereGeometry(1, 128, 96);
+        const intactSurface = new THREE.Mesh(surfaceGeometry, material);
+        globe.add(intactSurface);
+        if (interior) globe.add(interior.group);
+        const atmosphereGeometry = new THREE.SphereGeometry(1.025, 48, 32);
+        const atmosphereMaterial = new THREE.ShaderMaterial({
+          vertexShader: `varying vec3 vNormal; varying vec3 vPosition;
+          void main() {
+            vNormal = normalize(normalMatrix * normal);
+            vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+            gl_Position = projectionMatrix * vec4(vPosition, 1.0);
+          }`,
+          fragmentShader: `varying vec3 vNormal; varying vec3 vPosition;
+          void main() {
+            float edge = pow(1.0 - abs(dot(normalize(vNormal), normalize(-vPosition))), 4.0);
+            gl_FragColor = vec4(0.88, 0.48, 0.27, edge * 0.24);
+          }`,
           blending: THREE.AdditiveBlending,
           side: THREE.BackSide,
           transparent: true,
           depthWrite: false,
         });
-        const atmosphere = new THREE.Mesh(atmosphereGeo, atmosphereMat);
-        rootGroup.add(atmosphere);
-
-        // Inner soft atmospheric rim for lit edge
-        const innerAtmoGeo = new THREE.SphereGeometry(1.02, 64, 48);
-        const innerAtmoMat = new THREE.ShaderMaterial({
-          vertexShader: `
-            varying vec3 vNormal;
-            varying vec3 vPosition;
-            void main() {
-              vNormal = normalize(normalMatrix * normal);
-              vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            varying vec3 vNormal;
-            varying vec3 vPosition;
-            uniform vec3 uColor;
-            void main() {
-              vec3 normal = normalize(vNormal);
-              vec3 viewDir = normalize(-vPosition);
-              float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), 4.5);
-              gl_FragColor = vec4(uColor, fresnel * 0.45);
-            }
-          `,
-          uniforms: {
-            uColor: { value: new THREE.Color(0xffcca3) },
-          },
-          blending: THREE.AdditiveBlending,
-          side: THREE.FrontSide,
-          transparent: true,
-          depthWrite: false,
-        });
-        const innerAtmo = new THREE.Mesh(innerAtmoGeo, innerAtmoMat);
-        globe.add(innerAtmo);
-
-        // Interactive 3D Cosmic Particle Swarm / Stardust Halo
-        const particleCount = 1100;
-        const particlePositions = new Float32Array(particleCount * 3);
-        const particleOriginals = new Float32Array(particleCount * 3);
-        const particlePhases = new Float32Array(particleCount);
-        const particleSpeeds = new Float32Array(particleCount);
-
-        for (let i = 0; i < particleCount; i++) {
-          const theta = Math.random() * Math.PI * 2;
-          const phi = Math.acos(Math.random() * 2 - 1);
-          // Disc flattening with inclined angle
-          const dist = 1.18 + Math.random() * 0.72;
-          const x = dist * Math.sin(phi) * Math.cos(theta);
-          const y = dist * Math.sin(phi) * Math.sin(theta) * 0.65; // flattened slightly
-          const z = dist * Math.cos(phi);
-
-          particlePositions[i * 3] = x;
-          particlePositions[i * 3 + 1] = y;
-          particlePositions[i * 3 + 2] = z;
-
-          particleOriginals[i * 3] = x;
-          particleOriginals[i * 3 + 1] = y;
-          particleOriginals[i * 3 + 2] = z;
-
-          particlePhases[i] = Math.random() * Math.PI * 2;
-          particleSpeeds[i] = 0.001 + Math.random() * 0.002;
-        }
-
-        const particleGeo = new THREE.BufferGeometry();
-        particleGeo.setAttribute(
-          "position",
-          new THREE.Float32BufferAttribute(particlePositions, 3),
+        const atmosphere = new THREE.Mesh(
+          atmosphereGeometry,
+          atmosphereMaterial,
         );
-        const particleMat = new THREE.PointsMaterial({
-          size: 0.019,
-          color: 0xf3b38d,
-          transparent: true,
-          opacity: 0.68,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const particles = new THREE.Points(particleGeo, particleMat);
-        rootGroup.add(particles);
-
-        // Coordinate Graticule (Grid)
-        const gridGeometry = new THREE.SphereGeometry(1.006, 24, 12);
+        scene.add(atmosphere);
+        const gridGeometry = new THREE.SphereGeometry(1.004, 24, 12);
+        const wire = new THREE.WireframeGeometry(gridGeometry);
         const gridMaterial = new THREE.LineBasicMaterial({
           color: 0xf7ca9d,
           transparent: true,
-          opacity: 0.22,
+          opacity: 0.2,
         });
-        const wire = new THREE.WireframeGeometry(gridGeometry);
         const graticule = new THREE.LineSegments(wire, gridMaterial);
         globe.add(graticule);
-
-        // Region Location Pin
         const pinGeometry = new THREE.SphereGeometry(0.018, 12, 8);
         const pinMaterial = new THREE.MeshBasicMaterial({ color: 0xffd4a3 });
         const pin = new THREE.Mesh(pinGeometry, pinMaterial);
         pin.visible = false;
         globe.add(pin);
 
-        // Interactive Radar Ping Ring on Click
-        const radarGeo = new THREE.RingGeometry(1.01, 1.025, 48);
-        const radarMat = new THREE.MeshBasicMaterial({
-          color: 0xe99c72,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0,
-          blending: THREE.AdditiveBlending,
-        });
-        const radarPing = new THREE.Mesh(radarGeo, radarMat);
-        radarPing.rotation.x = Math.PI / 2;
-        rootGroup.add(radarPing);
+        let texture: InstanceType<typeof THREE.Texture> | undefined;
+        let frame = 0;
+        let last = 0;
+        let inView = true;
+        let failed = false;
+        let targetX = 0.12;
+        let targetY = 3.6;
+        let velocity = 0;
+        let pointer: { x: number; y: number; id: number; time: number } | null =
+          null;
+        globe.rotation.set(targetX, targetY, -0.1);
 
-        let radarScale = 1;
-        let radarOpacity = 0;
+        let renderWidth = 0;
+        let renderHeight = 0;
+        function fitRenderer() {
+          const { width, height } = mount!.getBoundingClientRect();
+          if (!width || !height) return;
+          // Match the displayed size, including the cutaway transform. Bucket allocations
+          // so the framebuffer is not recreated for every small scroll movement.
+          const nextWidth = Math.min(1200, Math.ceil(width / 64) * 64);
+          const nextHeight = Math.round((nextWidth * height) / width);
+          if (nextWidth !== renderWidth || nextHeight !== renderHeight) {
+            renderWidth = nextWidth;
+            renderHeight = nextHeight;
+            renderer.setSize(renderWidth, renderHeight, false);
+          }
+          const aspect = width / height;
+          if (camera instanceof THREE.OrthographicCamera) {
+            const opening = motion?.current.orientation ?? 0;
+            const halfWidth = 1.12 + opening * 0.82;
+            const halfHeight = Math.max(1.12, halfWidth / aspect);
+            camera.left = -halfHeight * aspect;
+            camera.right = halfHeight * aspect;
+            camera.top = halfHeight;
+            camera.bottom = -halfHeight;
+          } else camera.aspect = aspect;
+          camera.updateProjectionMatrix();
+        }
 
-        const triggerRadarPing = () => {
-          radarScale = 1.01;
-          radarOpacity = 0.85;
-          sound.playGlobePing();
-        };
+        function draw() {
+          if (disposed || failed || renderer.getContext().isContextLost())
+            return;
+          fitRenderer();
+          graticule.visible = settings.current.grid;
+          const separation = motion?.current.explosion ?? 0;
+          interior?.setReveal(separation);
+          if (interior) {
+            interior.group.visible = separation > 0.0001;
+            intactSurface.visible = !interior.group.visible;
+          }
+          if (interior) {
+            // Settle into a readable cutaway, then return continuously to the orbital view.
+            const orientation = motion?.current.orientation ?? separation;
+            const turn = Math.atan2(
+              Math.sin(0.55 - targetY),
+              Math.cos(0.55 - targetY),
+            );
+            globe.rotation.set(
+              targetX + (0.08 - targetX) * orientation,
+              targetY + turn * orientation,
+              -0.1 * (1 - orientation),
+            );
+          }
+          atmosphere.visible = separation < 0.02;
+          if (camera instanceof THREE.PerspectiveCamera) {
+            camera.position.z = 3.65 / settings.current.zoom;
+          }
+          renderer.render(scene, camera);
+        }
 
-        // Navigation state & Inertia variables
-        let targetX = 0.15,
-          targetY = 3.6,
-          frame = 0,
-          last = 0,
-          inView = true,
-          pointer: { x: number; y: number; id: number } | null = null,
-          velX = 0,
-          velY = 0,
-          mouseNormX = 0,
-          mouseNormY = 0,
-          tiltTargetX = 0,
-          tiltTargetY = 0;
+        function tick(time: number) {
+          frame = 0;
+          if (disposed || !inView || document.hidden || failed) return;
+          const delta = Math.min((time - last) / 1000, 0.05);
+          last = time;
+          const {
+            paused: stopped,
+            reduced: reduce,
+            allowMotion: manual,
+          } = settings.current;
+          const rotating = !stopped && (!reduce || manual);
+          const inspecting =
+            motion?.current.hold || (motion?.current.explosion ?? 0) > 0.001;
+          if (!pointer && rotating && !inspecting) targetY += delta * 0.16;
+          if (!pointer && !reduce && !stopped && !inspecting) {
+            targetY += velocity * delta;
+            velocity *= Math.exp(-delta * 5);
+          } else velocity = 0;
+          const blend = reduce ? 1 : 1 - Math.exp(-delta * 12);
+          globe.rotation.x += (targetX - globe.rotation.x) * blend;
+          globe.rotation.y += (targetY - globe.rotation.y) * blend;
+          draw();
+          const settling =
+            Math.abs(targetX - globe.rotation.x) +
+              Math.abs(targetY - globe.rotation.y) >
+            0.0001;
+          if (
+            (rotating && !inspecting) ||
+            (!interior && settling) ||
+            pointer ||
+            Math.abs(velocity) > 0.001
+          )
+            frame = requestAnimationFrame(tick);
+        }
 
-        globe.rotation.set(targetX, targetY, -0.12);
+        function start() {
+          if (!frame && inView && !document.hidden && !disposed && !failed) {
+            last = performance.now();
+            frame = requestAnimationFrame(tick);
+          }
+        }
 
-        const focus = (destination: Region) => {
+        function focus(destination: Region) {
           const lat = (destination.latitude * Math.PI) / 180;
           const lon = (destination.longitude * Math.PI) / 180;
           targetX = lat;
-          targetY = -Math.PI / 2 - lon;
+          const orientation = -Math.PI / 2 - lon;
+          targetY =
+            globe.rotation.y +
+            Math.atan2(
+              Math.sin(orientation - globe.rotation.y),
+              Math.cos(orientation - globe.rotation.y),
+            );
           globe.rotation.z = 0;
+          velocity = 0;
           pin.position
             .set(
               Math.cos(lat) * Math.cos(lon),
@@ -309,109 +279,16 @@ export default function MarsGlobe({
             )
             .multiplyScalar(1.02);
           pin.visible = true;
-          triggerRadarPing();
-          if (settings.current.reduced) globe.rotation.set(targetX, targetY, 0);
           start();
-        };
-
+        }
         api.current = { focus, start };
+        if (motion) motion.current.requestRender = start;
 
-        function draw() {
-          if (disposed || renderer.getContext().isContextLost()) return;
-          graticule.visible = settings.current.grid;
-          camera.position.z = 4.5 / settings.current.zoom;
-          renderer.render(scene, camera);
-        }
-
-        function tick(time: number) {
-          frame = 0;
-          if (disposed || !inView || document.hidden) return;
-          const delta = Math.min((time - last) / 1000, 0.05);
-          if (time - last < 25) {
-            frame = requestAnimationFrame(tick);
-            return;
-          }
-          last = time;
-
-          // Update atmosphere breathing
-          atmosphereMat.uniforms.uTime.value = time * 0.001;
-
-          // Auto-rotation if not paused/reduced/dragging
-          if (!settings.current.paused && !settings.current.reduced && !pointer) {
-            targetY += delta * 0.085;
-          }
-
-          // Inertia coasting after drag release
-          if (!pointer && (Math.abs(velX) > 0.0001 || Math.abs(velY) > 0.0001)) {
-            targetY += velX;
-            targetX = THREE.MathUtils.clamp(targetX + velY, -1.2, 1.2);
-            velX *= 0.91;
-            velY *= 0.91;
-          }
-
-          // Smooth interpolation for rotation
-          const smoothFactor = settings.current.reduced ? 1 : 0.12;
-          globe.rotation.x += (targetX - globe.rotation.x) * smoothFactor;
-          globe.rotation.y += (targetY - globe.rotation.y) * smoothFactor;
-
-          // Spatial parallax tilt from mouse movement
-          tiltTargetX = mouseNormY * 0.22;
-          tiltTargetY = mouseNormX * 0.22;
-          rootGroup.rotation.x += (tiltTargetX - rootGroup.rotation.x) * 0.08;
-          rootGroup.rotation.y += (tiltTargetY - rootGroup.rotation.y) * 0.08;
-
-          // Rotate and swirl cosmic particles
-          if (!settings.current.reduced) {
-            particles.rotation.y += 0.0008;
-            particles.rotation.z += 0.0003;
-
-            // Radar pulse ring expansion
-            if (radarOpacity > 0.01) {
-              radarScale += delta * 0.95;
-              radarOpacity -= delta * 1.2;
-              radarPing.scale.set(radarScale, radarScale, radarScale);
-              radarMat.opacity = Math.max(0, radarOpacity);
-            }
-          }
-
-          draw();
-
-          const moving =
-            Math.abs(targetX - globe.rotation.x) +
-              Math.abs(targetY - globe.rotation.y) +
-              Math.abs(velX) +
-              Math.abs(velY) >
-            0.0001;
-
-          if (
-            (!settings.current.paused && !settings.current.reduced) ||
-            pointer ||
-            moving ||
-            radarOpacity > 0.01
-          ) {
-            frame = requestAnimationFrame(tick);
-          }
-        }
-
-        function start() {
-          if (!frame && inView && !document.hidden && !disposed) {
-            last = performance.now();
-            frame = requestAnimationFrame(tick);
-          }
-        }
-
-        const resize = new ResizeObserver(() => {
-          const { width, height } = mount.getBoundingClientRect();
-          if (!width || !height) return;
-          renderer.setSize(width, height);
-          camera.aspect = width / height;
-          camera.updateProjectionMatrix();
-          draw();
-        });
+        const resize = new ResizeObserver(draw);
         resize.observe(mount);
-
         const observer = new IntersectionObserver(([entry]) => {
           inView = entry.isIntersecting;
+          setVisible(inView && !document.hidden);
           if (inView) start();
           else {
             cancelAnimationFrame(frame);
@@ -419,46 +296,56 @@ export default function MarsGlobe({
           }
         });
         observer.observe(mount);
-
         const visibility = () => {
+          setVisible(inView && !document.hidden);
           if (document.hidden) {
             cancelAnimationFrame(frame);
             frame = 0;
           } else start();
         };
-
         const down = (event: PointerEvent) => {
-          if (!event.isPrimary) return;
-          pointer = { x: event.clientX, y: event.clientY, id: event.pointerId };
-          velX = 0;
-          velY = 0;
+          if (
+            !event.isPrimary ||
+            event.button !== 0 ||
+            motion?.current.hold ||
+            (motion?.current.explosion ?? 0) > 0.001
+          )
+            return;
+          pointer = {
+            x: event.clientX,
+            y: event.clientY,
+            id: event.pointerId,
+            time: event.timeStamp,
+          };
+          velocity = 0;
           mount.setPointerCapture(event.pointerId);
-          triggerRadarPing();
           start();
         };
-
         const move = (event: PointerEvent) => {
-          const rect = mount.getBoundingClientRect();
-          mouseNormX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          mouseNormY = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
-
-          if (!pointer || event.pointerId !== pointer.id) return;
-          const deltaX = (event.clientX - pointer.x) * 0.008;
-          const deltaY = (event.clientY - pointer.y) * 0.005;
-
-          velX = deltaX;
-          velY = deltaY;
-
-          targetY += deltaX;
-          targetX = THREE.MathUtils.clamp(targetX + deltaY, -1.2, 1.2);
-          pointer.x = event.clientX;
-          pointer.y = event.clientY;
+          if (!pointer || pointer.id !== event.pointerId) return;
+          const dx = (event.clientX - pointer.x) * 0.007;
+          const dy = (event.clientY - pointer.y) * 0.005;
+          const elapsed = Math.max(
+            (event.timeStamp - pointer.time) / 1000,
+            0.008,
+          );
+          velocity = THREE.MathUtils.clamp(dx / elapsed, -2, 2);
+          targetY += dx;
+          targetX = THREE.MathUtils.clamp(targetX + dy, -1.2, 1.2);
+          pointer = {
+            x: event.clientX,
+            y: event.clientY,
+            id: event.pointerId,
+            time: event.timeStamp,
+          };
+          start();
         };
-
-        const up = () => {
+        const up = (event: PointerEvent) => {
+          if (pointer?.id !== event.pointerId) return;
+          if (event.timeStamp - pointer.time > 100) velocity = 0;
           pointer = null;
+          start();
         };
-
         const key = (event: KeyboardEvent) => {
           if (
             !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(
@@ -467,27 +354,25 @@ export default function MarsGlobe({
           )
             return;
           event.preventDefault();
-          if (event.key === "ArrowLeft") targetY -= 0.12;
-          if (event.key === "ArrowRight") targetY += 0.12;
+          if (event.key === "ArrowLeft") targetY -= 0.16;
+          if (event.key === "ArrowRight") targetY += 0.16;
           if (event.key === "ArrowUp") targetX = Math.max(-1.2, targetX - 0.12);
           if (event.key === "ArrowDown")
             targetX = Math.min(1.2, targetX + 0.12);
-          triggerRadarPing();
           start();
         };
-
         const lost = (event: Event) => {
           event.preventDefault();
           cancelAnimationFrame(frame);
           frame = 0;
           setStatus("fallback");
         };
-
         const restored = () => {
+          if (!texture || failed) return;
           setStatus("ready");
+          draw();
           start();
         };
-
         document.addEventListener("visibilitychange", visibility);
         mount.addEventListener("pointerdown", down);
         mount.addEventListener("pointermove", move);
@@ -497,9 +382,6 @@ export default function MarsGlobe({
         mount.addEventListener("keydown", key);
         renderer.domElement.addEventListener("webglcontextlost", lost);
         renderer.domElement.addEventListener("webglcontextrestored", restored);
-
-        if (initialRegion.current) focus(initialRegion.current);
-        start();
 
         cleanup = () => {
           cancelAnimationFrame(frame);
@@ -517,32 +399,65 @@ export default function MarsGlobe({
             "webglcontextrestored",
             restored,
           );
-
-          geometry.dispose();
-          material.dispose();
+          interior?.dispose();
+          surfaceGeometry?.dispose();
+          [
+            material,
+            atmosphereGeometry,
+            atmosphereMaterial,
+            gridGeometry,
+            wire,
+            gridMaterial,
+            pinGeometry,
+            pinMaterial,
+          ].forEach((resource) => resource.dispose());
           texture?.dispose();
-          atmosphereGeo.dispose();
-          atmosphereMat.dispose();
-          innerAtmoGeo.dispose();
-          innerAtmoMat.dispose();
-          particleGeo.dispose();
-          particleMat.dispose();
-          gridGeometry.dispose();
-          wire.dispose();
-          gridMaterial.dispose();
-          pinGeometry.dispose();
-          pinMaterial.dispose();
-          radarGeo.dispose();
-          radarMat.dispose();
           renderer.dispose();
           renderer.domElement.remove();
           api.current = null;
+          if (motion) motion.current.requestRender = undefined;
         };
+        new THREE.TextureLoader().load(
+          "/images/mars-8k.jpg",
+          (loaded) => {
+            if (disposed) {
+              loaded.dispose();
+              return;
+            }
+            texture = loaded;
+            loaded.colorSpace = THREE.SRGBColorSpace;
+            loaded.wrapS = THREE.RepeatWrapping;
+            loaded.anisotropy = Math.min(
+              4,
+              renderer.capabilities.getMaxAnisotropy(),
+            );
+            material.map = loaded;
+            material.needsUpdate = true;
+            setStatus("ready");
+            readyCallback.current?.();
+            draw();
+            start();
+          },
+          undefined,
+          () => {
+            if (disposed) return;
+            failed = true;
+            cancelAnimationFrame(frame);
+            frame = 0;
+            setStatus("fallback");
+            readyCallback.current?.();
+          },
+        );
+        if (selectedRegion.current) focus(selectedRegion.current);
+        start();
       })
       .catch(() => {
-        if (!disposed) setStatus("fallback");
+        if (!disposed) {
+          cleanup();
+          setStatus("fallback");
+          readyCallback.current?.();
+        }
       });
-
     return () => {
       disposed = true;
       cleanup();
@@ -552,18 +467,26 @@ export default function MarsGlobe({
   useEffect(() => {
     if (region) api.current?.focus(region);
   }, [region]);
-
   useEffect(() => {
     api.current?.start();
-  }, [paused, zoom, grid, reduced]);
+  }, [paused, zoom, grid, reduced, allowMotion]);
 
+  const fallbackMoving =
+    status !== "ready" && visible && !paused && (!reduced || allowMotion);
   return (
-    <div className={`relative ${className}`}>
+    <div
+      className={`globe-view relative ${className}`}
+      data-renderer={status}
+      data-motion-enabled={allowMotion}
+    >
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-700 ${status === "ready" ? "opacity-0" : "opacity-100"}`}
+        className={`globe-poster ${status === "ready" ? "globe-poster-hidden" : ""}`}
       >
-        <div className="aspect-square h-[72%] max-w-[85%] rounded-full bg-[url('/images/mars-color.jpg')] bg-cover bg-center shadow-[inset_-50px_-20px_70px_25px_#050505,inset_8px_4px_24px_#e99c7250]" />
+        <div
+          className="globe-poster-sphere"
+          style={{ animationPlayState: fallbackMoving ? "running" : "paused" }}
+        />
       </div>
       <div
         ref={host}
@@ -572,14 +495,14 @@ export default function MarsGlobe({
         aria-roledescription="interactive globe"
         aria-label="3D Mars globe. Drag or use the arrow keys to rotate."
         tabIndex={status === "ready" ? 0 : -1}
-        className={`absolute inset-0 touch-pan-y rounded-full outline-offset-[-16px] cursor-none ${status === "ready" ? "" : "opacity-0"}`}
+        className={`absolute inset-0 touch-pan-y rounded-full cursor-grab active:cursor-grabbing outline-offset-[-16px] ${status === "ready" ? "" : "opacity-0"}`}
       />
       {status === "fallback" && (
         <p
-          className="absolute inset-x-0 bottom-2 text-center text-[10px] text-muted"
+          className="absolute inset-x-0 bottom-0 text-center text-xs text-muted"
           role="status"
         >
-          Static view · 3D is unavailable on this device
+          Surface preview · 3D is unavailable on this device
         </p>
       )}
     </div>

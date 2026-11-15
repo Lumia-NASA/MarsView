@@ -1,0 +1,64 @@
+name: AresNav CI & Security Guard
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke-and-security:
+    name: Smoke Tests & DevSecOps Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Backend Dependencies
+        run: |
+          npm ci --prefix backend
+
+      - name: Dependency Security Audit (SCA Gate)
+        run: |
+          npm audit --prefix backend --audit-level=high
+
+      - name: DevSecOps Gate — Leak & Secrets Prevention
+        run: |
+          echo "Verificando se há arquivos .env ou chaves vazadas no repositório..."
+          if find . -name "*.env" -not -name "*.env.example" | grep -q .; then
+            echo "::error::VIOLAÇÃO DE SEGURANÇA: Arquivo .env detectado no repositório!"
+            exit 1
+          fi
+          echo "Isolamento de segredos validado com sucesso. Nenhum .env rastreado."
+
+      - name: Execute AresNav Smoke Test Suite (Contract, ScopeGuard & EvidenceGate)
+        run: |
+          node tests/smoke-test.js
+
+      - name: Suit Payload Physics Tests (GO / NO-GO)
+        run: |
+          node tests/physics-test.js
+
+      - name: Mars Sun & Time vs Perseverance MEDA (sunrise, sunset, Ls, landing time)
+        run: |
+          node tests/sun-test.js
+
+      - name: EVA Execution Engine (position, O2, turn-back by O2 or daylight, callouts)
+        run: |
+          node tests/exec-test.js
+          node tests/calc-test.js
+          node tests/hirise-test.js
+
+      - name: FU Berlin Integration Tests (360° viewer logic, tiles & panorama routes, offline)
+        run: |
+          node tests/fub-test.js
+
+      - name: End-to-end Demo Flow (headless Chrome)
+        run: |
+          node tests/demo-flow-test.js

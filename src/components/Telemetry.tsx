@@ -1,41 +1,64 @@
 import {
   ArrowUpRight,
   Gauge,
-  LocateFixed,
   RefreshCw,
   Thermometer,
   Radio,
 } from "lucide-react";
 import { useTelemetry } from "../hooks/useTelemetry";
-import { coordinate } from "../lib/telemetry";
-import { links } from "../lib/config";
+import { NASA_WEATHER_URL } from "../lib/telemetry";
 import { TiltCard } from "./TiltCard";
-import { ScrambleText } from "./ScrambleText";
+
+function value(number: number | null | undefined) {
+  return number == null ? "—" : String(number).replace("-", "−");
+}
+
+function TemperatureRange({
+  min,
+  max,
+}: {
+  min: number | null | undefined;
+  max: number | null | undefined;
+}) {
+  return (
+    <div className="mt-8 grid grid-cols-2 gap-4">
+      {[
+        ["Low", min],
+        ["High", max],
+      ].map(([label, temperature]) => (
+        <div key={String(label)}>
+          <p className="mb-3 text-xs text-muted">{label}</p>
+          <p className="whitespace-nowrap font-mono text-[32px] leading-none tracking-[-.035em] tabular-nums lg:text-[38px]">
+            {value(temperature as number | null | undefined)}
+            <span className="ml-1 text-sm text-muted">°C</span>
+          </p>
+          {temperature == null && (
+            <p className="mt-3 text-xs text-muted">Not reported</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Telemetry() {
-  const { reading, loading, error, refresh, isDemo, stale } = useTelemetry();
-  const status = isDemo
-    ? "DEMO FEED"
-    : error
-      ? "CONNECTION INTERRUPTED"
-      : loading && !reading
-        ? "CONNECTING"
-        : stale
-          ? "ARCHIVED READING"
-          : "SOURCE CONNECTED";
-
+  const { reading, loading, error, refresh, checkedAt } = useTelemetry();
+  const status = error
+    ? "SOURCE UNAVAILABLE"
+    : loading
+      ? "CHECKING NASA"
+      : "PUBLISHED OBSERVATIONS";
   return (
     <section
       id="telemetry"
       aria-labelledby="telemetry-title"
       className="relative overflow-hidden border-y border-white/[.07] bg-[#090807] py-24 sm:py-28"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-20 left-1/2 h-[400px] w-[800px] -translate-x-1/2 rounded-full bg-amber-950/20 blur-3xl animate-[pulse_7s_ease-in-out_infinite]"
-      />
       <div className="page-width relative">
-        <div className="mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+        <div
+          data-scroll-heading
+          className="mb-8 flex flex-col justify-between gap-6 sm:flex-row sm:items-end"
+        >
           <div>
             <h2
               id="telemetry-title"
@@ -46,187 +69,154 @@ export function Telemetry() {
               <span className="text-muted">another world.</span>
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-7 text-muted">
-              The environment. The position. The details that bring a distant
-              planet into focus.
+              Measured on Mars by Curiosity. Air, ground and atmosphere at Gale
+              crater, recorded by the REMS instrument.
             </p>
           </div>
-          <div className="technical inline-flex w-fit items-center gap-2.5 rounded-full border border-copper/30 bg-copper/[.06] px-4 py-2.5 text-copper backdrop-blur-sm">
-            <span className="size-1.5 animate-ping rounded-full bg-copper" />
-            <ScrambleText text={status} />
-          </div>
+          <p
+            role="status"
+            className="technical inline-flex w-fit shrink-0 items-center gap-2.5 rounded-full border border-copper/30 px-4 py-2.5 text-copper"
+          >
+            <Radio size={14} aria-hidden="true" />
+            {status}
+          </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
-          {/* Surface Temperature Card */}
-          <TiltCard
-            cursorMode="explore"
-            className="glass-panel group p-7 transition duration-300 hover:border-copper/40"
-          >
+        <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-y border-white/10 py-4 text-sm">
+          <p>
+            {reading ? (
+              <>
+                <time dateTime={reading.observedAt}>
+                  {new Date(reading.observedAt).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  })}
+                </time>
+                <span className="ml-3 font-mono text-copper">
+                  SOL {reading.sol}
+                </span>
+              </>
+            ) : (
+              "Awaiting NASA observations"
+            )}
+          </p>
+          <p className="text-xs text-muted">
+            {error && reading
+              ? "Last successfully retrieved record"
+              : "Latest dated record in the source"}{" "}
+            · Not a live feed
+          </p>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-3" aria-busy={loading}>
+          <TiltCard cursorMode="explore" className="glass-panel p-6 lg:p-7">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs text-muted">Surface temperature</h3>
+              <h3 className="text-sm text-muted">Air temperature</h3>
               <Thermometer
                 size={19}
                 strokeWidth={1.3}
-                className="text-copper transition-transform duration-300 group-hover:scale-110"
+                className="text-copper"
               />
             </div>
-            <p className="mt-10 flex items-baseline gap-2">
-              <span className="font-mono text-[44px] leading-none tracking-[-.06em] tabular-nums text-paper">
-                {reading
-                  ? reading.temperatureC.toFixed(1).replace("-", "−")
-                  : "—"}
-              </span>
-              <span className="text-xl text-muted">°C</span>
+            <TemperatureRange min={reading?.airMinC} max={reading?.airMaxC} />
+            <p className="mt-8 border-t border-white/10 pt-4 font-mono text-[10px] text-muted">
+              REPORTED SOL MINIMUM / MAXIMUM
             </p>
-            <div className="mt-9 flex justify-between border-t border-white/10 pt-4 font-mono text-[10px] text-muted">
-              <span>
-                <ScrambleText
-                  text={
-                    isDemo ? "ILLUSTRATIVE READING" : "REPORTED TEMPERATURE"
-                  }
-                />
-              </span>
-              <span className="text-copper font-semibold">MARS</span>
-            </div>
           </TiltCard>
-
-          {/* Atmospheric Pressure Card */}
-          <TiltCard
-            cursorMode="explore"
-            className="glass-panel group p-7 transition duration-300 hover:border-copper/40"
-          >
+          <TiltCard cursorMode="explore" className="glass-panel p-6 lg:p-7">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs text-muted">Atmospheric pressure</h3>
-              <Gauge size={19} strokeWidth={1.3} className="text-copper transition-transform duration-300 group-hover:scale-110" />
-            </div>
-            <p className="mt-10 flex items-baseline gap-2">
-              <span className="font-mono text-[44px] leading-none tracking-[-.06em] tabular-nums text-paper">
-                {reading ? reading.pressurePa.toFixed(0) : "—"}
-              </span>
-              <span className="text-xl text-muted">Pa</span>
-            </p>
-            <div className="mt-9 flex justify-between border-t border-white/10 pt-4 font-mono text-[10px] text-muted">
-              <span>
-                <ScrambleText
-                  text={
-                    isDemo ? "ILLUSTRATIVE READING" : "REPORTED PRESSURE"
-                  }
-                />
-              </span>
-              <span className="text-copper font-semibold">SURFACE</span>
-            </div>
-          </TiltCard>
-
-          {/* Coordinates Card */}
-          <TiltCard
-            cursorMode="explore"
-            className="glass-panel group p-7 transition duration-300 hover:border-copper/40"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs text-muted">
-                {isDemo ? "Observation coordinates" : "Orbital coordinates"}
-              </h3>
-              <LocateFixed
+              <h3 className="text-sm text-muted">Ground temperature</h3>
+              <Thermometer
                 size={19}
                 strokeWidth={1.3}
-                className="text-copper transition-transform duration-300 group-hover:scale-110"
+                className="text-copper"
               />
             </div>
-            <div className="mt-8 space-y-1 font-mono text-[24px] leading-[1.25] tracking-[-.035em] tabular-nums">
-              <p className="text-paper">{reading ? coordinate(reading.latitude, "latitude") : "—"}</p>
-              <p className="text-muted">
-                {reading ? coordinate(reading.longitude, "longitude") : "—"}
+            <TemperatureRange
+              min={reading?.groundMinC}
+              max={reading?.groundMaxC}
+            />
+            <p className="mt-8 border-t border-white/10 pt-4 font-mono text-[10px] text-muted">
+              REPORTED SOL MINIMUM / MAXIMUM
+            </p>
+          </TiltCard>
+          <TiltCard cursorMode="explore" className="glass-panel p-6 lg:p-7">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm text-muted">Atmospheric pressure</h3>
+              <Gauge size={19} strokeWidth={1.3} className="text-copper" />
+            </div>
+            <div className="mt-8">
+              <p className="mb-3 text-xs text-muted">Reported pressure</p>
+              <p className="font-mono text-[32px] leading-none tracking-[-.035em] tabular-nums lg:text-[38px]">
+                {value(reading?.pressurePa)}
+                <span className="ml-2 text-sm text-muted">Pa</span>
               </p>
+              {reading && reading.pressurePa === null && (
+                <p className="mt-3 text-xs text-muted">Not reported</p>
+              )}
             </div>
-            <div className="mt-6 flex justify-between border-t border-white/10 pt-4 font-mono text-[10px] text-muted">
-              <span>
-                <ScrambleText
-                  text={
-                    isDemo ? "JEZERO REFERENCE POINT" : "SOURCE POSITION"
-                  }
-                />
-              </span>
-              <span className="text-copper font-semibold">
-                {reading ? `SOL ${reading.sol}` : "PENDING"}
-              </span>
-            </div>
+            <p className="mt-8 border-t border-white/10 pt-4 font-mono text-[10px] text-muted">
+              AT CURIOSITY'S LOCATION
+            </p>
           </TiltCard>
         </div>
 
-        <div className="mt-5 flex flex-col justify-between gap-4 text-[11px] leading-6 text-muted sm:flex-row sm:items-center">
-          <p className="max-w-[650px]">
-            {isDemo ? (
-              "Demonstration dataset · Values are illustrative, not current measurements. Coordinates mark the Jezero landing site."
-            ) : reading ? (
-              <>
-                Observed{" "}
-                <time dateTime={reading.observedAt}>
-                  {new Date(reading.observedAt).toLocaleString("en-GB", {
+        <div className="mt-6 flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+          <div className="max-w-[650px] text-xs leading-6 text-muted">
+            <a
+              href={NASA_WEATHER_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="quiet-link text-copper"
+            >
+              Source: NASA / JPL · REMS / Centro de Astrobiología{" "}
+              <ArrowUpRight size={13} />
+            </a>
+            <p className="mt-2">
+              Real observations published for public outreach. Measurements are
+              intermittent; missing values remain unreported. The Earth date
+              corresponds to the sol's Martian midday.
+            </p>
+            {checkedAt && (
+              <p className="mt-1">
+                Source checked:{" "}
+                <time dateTime={checkedAt}>
+                  {new Date(checkedAt).toLocaleString("en-GB", {
                     timeZone: "UTC",
                   })}{" "}
                   UTC
-                </time>{" "}
-                · {reading.source}
-                {stale && " · Not a current measurement."}
-              </>
-            ) : (
-              "Waiting for a verified source reading."
+                </time>
+                . This is the retrieval time, not the measurement time.
+              </p>
             )}
-          </p>
-          {isDemo ? (
-            <a
-              href={links.nasa}
-              target="_blank"
-              rel="noreferrer"
-              data-cursor="view"
-              className="quiet-link shrink-0 text-[11px]"
-            >
-              Explore the science
-              <ArrowUpRight size={13} />
-            </a>
-          ) : (
-            <button
-              onClick={refresh}
-              disabled={loading}
-              data-cursor="hover"
-              className="button-secondary shrink-0 px-4 text-[11px]"
-            >
-              <RefreshCw
-                size={13}
-                className={
-                  loading ? "animate-spin motion-reduce:animate-none" : ""
-                }
-              />
-              {loading ? "Refreshing…" : "Refresh readings"}
-            </button>
-          )}
+          </div>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="button-secondary shrink-0 px-4 text-[11px]"
+          >
+            <RefreshCw
+              size={13}
+              className={
+                loading ? "animate-spin motion-reduce:animate-none" : ""
+              }
+            />
+            {loading ? "Checking source…" : "Refresh observations"}
+          </button>
         </div>
         {error && (
           <p
             role="status"
             className="mt-4 rounded-xl border border-copper/30 bg-copper/5 p-4 text-sm text-copper"
           >
-            {error} {reading && "The last successful reading remains visible."}
+            {error}{" "}
+            {reading
+              ? "The last successful observation remains visible with its original date."
+              : "No measurements are shown until the source is available."}
           </p>
         )}
-        {!isDemo && reading && (
-          <a
-            href={reading.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            data-cursor="view"
-            className="quiet-link"
-          >
-            View original observation
-            <ArrowUpRight size={13} />
-          </a>
-        )}
-        <div className="mt-12 flex items-center gap-4 border-t border-white/10 pt-6">
-          <Radio size={17} className="text-copper/70 animate-pulse" />
-          <span className="technical text-muted">
-            <ScrambleText text="Across the distance, curiosity connects us." />
-          </span>
-        </div>
       </div>
     </section>
   );

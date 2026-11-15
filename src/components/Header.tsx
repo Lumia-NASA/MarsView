@@ -2,6 +2,7 @@ import { ArrowUpRight, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "./Brand";
 import { SoundToggle } from "./SoundToggle";
+import { dashboardPath } from "../lib/config";
 
 const navigation = [
   { href: "#capabilities", name: "Capabilities" },
@@ -22,7 +23,7 @@ export function Header() {
         menuButton.current?.focus();
       }
     };
-    const media = window.matchMedia("(min-width: 768px)");
+    const media = window.matchMedia("(min-width: 1024px)");
     const resize = () => {
       if (media.matches) setOpen(false);
     };
@@ -35,12 +36,14 @@ export function Header() {
   }, [open]);
 
   return (
-    <header className="absolute inset-x-0 top-0 z-40 border-b border-white/[.06] backdrop-blur-xs">
-      <div className="page-width flex h-20 items-center justify-between gap-4">
+    <header
+      className="site-header absolute inset-x-0 top-0 z-40"
+    >
+      <div className="page-width flex h-24 items-center justify-between gap-4">
         <Brand />
         <nav
           aria-label="Main navigation"
-          className="hidden items-center gap-6 lg:gap-9 md:flex"
+          className="hidden items-center gap-6 lg:gap-9 lg:flex"
         >
           {navigation.map((item) => (
             <a
@@ -56,11 +59,11 @@ export function Header() {
         <div className="flex items-center gap-3">
           <SoundToggle />
           <a
-            href="#explorer"
+            href={dashboardPath}
             data-cursor="explore"
             className="button-secondary hidden min-h-10 px-5 py-2 text-[10px] tracking-wider sm:inline-flex"
           >
-            Enter explorer
+            Open dashboard
             <ArrowUpRight size={14} />
           </a>
           <button
@@ -69,7 +72,7 @@ export function Header() {
             aria-expanded={open}
             aria-controls="mobile-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}
-            className="icon-button md:hidden"
+            className="icon-button lg:hidden"
           >
             {open ? <X size={19} /> : <Menu size={19} />}
           </button>
@@ -79,7 +82,7 @@ export function Header() {
         <nav
           id="mobile-navigation"
           aria-label="Mobile navigation"
-          className="absolute inset-x-0 top-20 border-b border-white/10 bg-void/95 px-6 py-8 backdrop-blur-xl md:hidden"
+          className="absolute inset-x-0 top-24 max-h-[calc(100dvh-96px)] overflow-y-auto border-b border-white/10 bg-void/95 px-6 py-8 backdrop-blur-xl lg:hidden"
         >
           {navigation.map((item) => (
             <a
@@ -93,11 +96,11 @@ export function Header() {
             </a>
           ))}
           <a
-            href="#explorer"
+            href={dashboardPath}
             onClick={() => setOpen(false)}
             className="button-primary mt-6 w-full"
           >
-            Launch Interactive Map
+            Open dashboard
             <ArrowUpRight size={16} />
           </a>
         </nav>

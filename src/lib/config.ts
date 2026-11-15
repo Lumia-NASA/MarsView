@@ -1,3 +1,5 @@
+export const dashboardPath = "/dashboard/";
+
 export const links = {
   nasa: "https://science.nasa.gov/mars/",
   api: "https://api.nasa.gov/",

@@ -6,7 +6,7 @@ import {
   Radar,
   Route,
 } from "lucide-react";
-import { links } from "../lib/config";
+import { dashboardPath, links } from "../lib/config";
 import { TiltCard } from "./TiltCard";
 import { ScrambleText } from "./ScrambleText";
 
@@ -45,7 +45,7 @@ export function InvestigationFlow() {
       className="page-width py-24 sm:py-32"
     >
       <div className="grid gap-10 lg:grid-cols-[.85fr_1.15fr] lg:items-start">
-        <div className="lg:sticky lg:top-24">
+        <div data-scroll-heading className="lg:sticky lg:top-24">
           <p className="technical text-copper">
             <ScrambleText text="A cartographic workflow" />
           </p>
@@ -63,17 +63,18 @@ export function InvestigationFlow() {
             explore.
           </p>
           <a
-            href="#explorer"
+            href={dashboardPath}
             data-cursor="explore"
             className="button-secondary mt-8"
           >
-            Start in the explorer <ArrowUpRight size={15} />
+            Open dashboard <ArrowUpRight size={15} />
           </a>
         </div>
 
         <ol className="border-t border-white/10">
           {stages.map(({ number, title, body, icon: Icon }) => (
             <li
+              data-scroll-line
               key={number}
               data-cursor="view"
               className="group grid gap-5 border-b border-white/10 py-7 transition-colors duration-300 hover:bg-white/[.015] sm:grid-cols-[74px_1fr_auto] sm:items-center sm:gap-8 px-3 rounded-lg"
