@@ -22,6 +22,8 @@ npm test            # Validação de dados externos
 npm run typecheck
 ```
 
+Com `npm run dev` ativo e Chrome ou Edge instalado, execute `node aresnav-mars-main/tests/helmet-navigation-test.cjs` para verificar a entrada/saída do Helmet HUD em WebGL real. O teste cobre fotos, terreno 3D, carregamento atrasado, redimensionamento, restauração da câmera e arraste após o retorno, em desktop e celular. Use `DASHBOARD_TEST_URL` para outro endereço e `CHROME_PATH` para outro navegador Chromium; o teste usa `puppeteer-core` das dependências de desenvolvimento do backend.
+
 Para produção, execute `npm run build` e `npm start`: o servidor Node serve `dist/` e a rota `/api/mars-weather` na porta 4173 (configurável por `PORT`). Use `HOST=0.0.0.0` quando necessário no provedor e termine HTTPS na hospedagem. Em um host exclusivamente estático, também será necessário hospedar essa rota em um backend e configurar `VITE_TELEMETRY_URL`; publicar somente `dist/` não oferece a consulta à NASA. O projeto assume hospedagem na raiz do domínio. Configure o domínio absoluto nos metadados Open Graph antes da publicação pública.
 
 ## O que está implementado
@@ -82,11 +84,17 @@ src/
 
 Os botões “Open dashboard” abrem `/dashboard/`, servido diretamente de `aresnav-mars-main/frontend`. A rota `/dashboard` redireciona para a versão com barra para resolver corretamente os scripts e dados relativos. `/api/v1/*` é encaminhado ao backend Fastify original, iniciado automaticamente em uma porta privada ao primeiro acesso. A integração funciona com `npm run dev`, `npm run preview` e `npm start`, sem iniciar manualmente outro terminal. A recarga direta de `/dashboard/` também funciona.
 
-O dashboard usa `responsive.css` e `responsive.js` para adaptar o espaço de trabalho. Até 1100 px de largura ou 600 px de altura, os painéis passam para uma navegação inferior: Preparar, Plano, Simulação e Ferramentas. Só um painel fica aberto por vez, com rolagem interna, fechamento acessível e controles originais preservados. A busca e as ações secundárias ficam no menu; no modo Capacete, os controles detalhados ficam em Ferramentas. Ao ampliar a janela, os painéis voltam ao layout de desktop sem reiniciar a missão.
+O dashboard usa `responsive.css` e `responsive.js` para manter o mapa dominante, com barra de título e busca sempre visível. Missão, Camadas, Rota e Ajustes (Mission, Layers, Route e Tools em inglês) selecionam um único painel em qualquer largura, com rolagem interna e estado preservado. Até 700 px de largura ou 500 px de altura, a navegação passa para a parte inferior; no celular, o painel abre na parte inferior, e em janelas baixas e largas ele fica à direita. As ações secundárias passam para Menu até 1100 px de largura ou 500 px de altura. Até 480 px de largura, o seletor de modos vai para Ajustes; os controles detalhados de Capacete também ficam ali. Não há interface de Simulação, play, velocidade, Follow live, status de link ou barra Return; os nós antigos de simulação permanecem ocultos e inertes apenas para preservar os vínculos dos módulos de cálculo. O globo abre inteiro e ajusta o enquadramento à área real do mapa enquanto o visitante não aproxima, arrasta ou navega; depois disso, redimensionar preserva a câmera escolhida. Não há deslocamento automático para Jezero ao entrar.
 
 `npm ci` na raiz instala as dependências do backend via `postinstall`. Na implantação, inclua `dist/`, `server/` e `aresnav-mars-main/` (frontend, backend e contrato), além das dependências instaladas. Publicar apenas `dist/` não inclui o dashboard nem suas APIs. O processo privado é encerrado junto com o servidor principal. As configurações e credenciais do dashboard continuam no backend original; nenhum arquivo de configuração privado é exposto pelo frontend.
 
 ## Fontes e atribuições
+
+A voz do ARES usa o serviço online Edge TTS por meio de `node-edge-tts` (MIT), com `en-US-AvaMultilingualNeural`, inglês, tom e velocidade naturais e MP3 de 24 kHz/96 kbps. Não exige chave de API de voz nem instalação de Python. O backend recebe o texto em `POST /api/v1/speech` e o envia ao serviço da Microsoft para sintetizar; é uma integração não oficial e depende da disponibilidade desse serviço. Não se trata de uma gravação humana.
+
+No painel ARES, **Test voice** reproduz uma amostra sem consultar a IA; **Voice off** interrompe respostas e avisos falados do dashboard e guarda a preferência. Novas falas substituem a anterior, e sair da página ou trocar de aba interrompe o áudio. Se a síntese falhar, o texto permanece disponível e o painel permite tentar novamente, sem recorrer à voz robótica do navegador. A música e os efeitos da landing continuam com seu controle próprio.
+
+A rota limita o texto a 4.000 caracteres, até três sínteses simultâneas e 20 solicitações por minuto por cliente. Áudios repetidos têm cache temporário em memória por até dez minutos, limitado a 24 entradas/12 MB; nenhum arquivo de voz é persistido. O frontend precisa de `media-src 'self' blob:` no CSP. `npm ci` instala a dependência de voz junto das dependências existentes do backend.
 
 - Textura: [Solar System Scope](https://www.solarsystemscope.com/textures/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Aplicada a uma esfera com iluminação artística; as cores não são uma escala científica.
 - Imagem: [Perseverance’s Mastcam-Z First High-Resolution Panorama, PIA23727](https://science.nasa.gov/photojournal/perseverances-mastcam-z-first-high-resolution-panorama/). NASA/JPL-Caltech/ASU/MSSS. Redimensionada para exibição.

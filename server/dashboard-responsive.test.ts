@@ -31,24 +31,43 @@ describe('responsive mission panels', () => {
     expect(document.querySelector<HTMLElement>('#leftPanel')!.inert).toBe(true);
     expect(document.querySelector<HTMLElement>('#rightPanel')!.inert).toBe(false);
   });
-  it('preserves the original simulation and map controls when changing screen sizes', () => {
-    const slider = document.querySelector('#simSlider');
+  it('keeps the selected panel and original inputs across screen sizes', () => {
+    button('layers').click();
+    const layer = document.querySelector<HTMLInputElement>('#ov-slope')!;
+    layer.checked = false;
     const mapControls = document.querySelector('.mapctl');
-    expect(mapControls?.parentElement?.id).toBe('compactTools');
+    expect(mapControls?.parentElement).toBe(document.body);
     media.matches = false; resize();
     expect(mapControls?.parentElement).toBe(document.body);
-    expect(document.querySelector('#simSlider')).toBe(slider);
-    expect(document.body.classList.contains('left-collapsed')).toBe(false);
+    expect(document.body.dataset.compactPanel).toBe('layers');
+    expect(document.querySelector('#ov-slope')).toBe(layer);
+    expect(layer.checked).toBe(false);
     media.matches = true; resize();
     expect(document.querySelector('.mapctl')).toBe(mapControls);
-    expect(mapControls?.parentElement?.id).toBe('compactTools');
+    expect(document.body.dataset.compactPanel).toBe('layers');
+  });
+  it('removes simulation controls from the visible and accessible workspace', () => {
+    const dock = document.querySelector<HTMLElement>('.dock')!;
+    expect(dock.hidden).toBe(true);
+    expect(dock.inert).toBe(true);
+    expect(document.querySelector('[data-panel="simulation"]')).toBeNull();
+  });
+  it('keeps view selection reachable through Tools on a phone', () => {
+    vi.stubGlobal('innerWidth', 390);
+    media.matches = true; resize();
+    expect(document.querySelector('.opmode')?.closest('#compactTools')).not.toBeNull();
+    button('tools').click();
+    expect(document.querySelector<HTMLElement>('#compactTools')!.hidden).toBe(false);
+    vi.stubGlobal('innerWidth', 1366);
+    media.matches = false; resize();
+    expect(document.querySelector('.opmode')?.parentElement?.className).toBe('workspace-toolbar');
   });
   it('closes the sheet when the view changes and returns focus through its close button', () => {
     button('tools').focus(); button('tools').click();
     document.querySelector<HTMLButtonElement>('#compactTools .compact-close')!.click();
     expect(document.activeElement).toBe(button('tools'));
-    button('simulation').click(); viewChange();
+    button('layers').click(); viewChange();
     expect(document.body.dataset.compactPanel).toBe('');
-    expect(button('simulation').getAttribute('aria-expanded')).toBe('false');
+    expect(button('layers').getAttribute('aria-expanded')).toBe('false');
   });
 });

@@ -51,7 +51,7 @@ fastify.register(require('@fastify/cors'), {
     if (allowed.includes(origin)) return cb(null, true);
     return cb(new Error('Origem não autorizada pela política AresNav'), false);
   },
-  methods: ['GET'],
+  methods: ['GET', 'POST'],
   exposedHeaders: ['X-AresNav-Evidence-SHA256', 'X-AresNav-Degraded', 'X-AresNav-Cache', 'X-AresNav-Data-Date']
 });
 
@@ -72,11 +72,13 @@ const FRONTEND_CSP = [
   "style-src 'self' 'unsafe-inline' https://unpkg.com https://cesium.com https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https://unpkg.com https://cesium.com",
-  "connect-src 'self' data: blob: https://cesium.com"
+  "connect-src 'self' data: blob: https://cesium.com",
+  "media-src 'self' blob:"
 ].join('; ');
 // Compressão gzip/brotli. O plugin cuida dos arquivos estáticos; as rotas da API (declaradas antes de o plugin
 // carregar) passam por este gancho global, que comprime JSON e texto acima de 1 KB.
 const zlib = require('zlib');
+require('./speech').registerSpeech(fastify);
 fastify.register(require('@fastify/compress'), { global: true, threshold: 1024, encodings: ['br', 'gzip'] });
 fastify.addHook('onSend', async (request, reply, payload) => {
   if (reply.getHeader('content-encoding') || !(typeof payload === 'string' || Buffer.isBuffer(payload))) return payload;

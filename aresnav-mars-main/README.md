@@ -35,7 +35,7 @@ Science route → risk explained → comparison → real panorama of the place �
    - **ARES:** speaks on its own at the key moments. With the actual pace at 85%, it reports the delay, "turn back in 5 min" and "turn back now".
 8. **Link cut:** the **NASA link · live** button simulates the Earth–Mars link going down. Route, verdict and physics keep working. Layers that need the internet say "unavailable offline".
 
-In the Helmet's 3D terrain you can move **on foot** (suited astronaut, eyes at 1.7 m), in a **crewed rover** (eyes at 2.4 m, 10 km/h, stops on climbs above 20°) or in **free flight**.
+In the Helmet's 3D terrain you can move **on foot** (suited astronaut, eyes at 1.7 m, 5.0 km/h; Shift = 7.9 km/h) or in a **crewed rover** (eyes at 2.4 m, 10 km/h; stops on climbs above 20°).
 
 ---
 

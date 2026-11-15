@@ -47,7 +47,7 @@ $('#ctlOut').onclick = () => onMap() ? A.map.zoomOut(1) : A.globe.zoom(2);
 $('#ctlNorth').onclick = () => { if (!onMap()) A.globe.north(); };
 
 /* ---------- troca rápida da imagem de fundo ---------- */
-const BASE_LABEL = { fub: 'Cor natural', hirise: 'HiRISE', mosaic: 'Mosaico', relief: 'Relevo' };
+const BASE_LABEL = { global: 'Global Mars', fub: 'Cor natural', hirise: 'HiRISE', mosaic: 'Mosaico', relief: 'Relevo' };
 function syncBase() {
   const v = document.querySelector('input[name="base"]:checked').value;
   $('#basePickLabel').textContent = BASE_LABEL[v]; $('#basePick').dataset.base = v;
@@ -133,34 +133,8 @@ const PLACES = [
   ['Calota polar norte', 86, 0, 2200, 'Planum Boreum'],
   ['Calota polar sul', -86, 0, 2200, 'Planum Australe']
 ];
-const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const input = $('#search'), list = $('#searchResults');
-let hits = [];
-function runSearch() {
-  const q = norm(input.value.trim());
-  hits = [];
-  if (q) {
-    A.POIS.forEach(p => { if (norm(T(p.n)).includes(q) || norm(p.n).includes(q)) hits.push({ n: T(p.n), sub: p.src, lat: p.lat, lon: p.lon, range: 4, poi: p }); });
-    PLACES.forEach(([n, lat, lon, range, sub]) => { if (norm(T(n)).includes(q) || norm(n).includes(q)) hits.push({ n: T(n), sub, lat, lon, range }); });
-    const m = /^\s*(-?\d+(?:[.,]\d+)?)[\s,;]+(-?\d+(?:[.,]\d+)?)\s*$/.exec(input.value);   // "lat, lon"
-    if (m) { const lat = parseFloat(m[1].replace(',', '.')), lon = parseFloat(m[2].replace(',', '.')); if (Math.abs(lat) <= 90 && Math.abs(lon) <= 360) hits.unshift({ n: `${lat}° N, ${lon}° L`, sub: 'Coordenadas', lat, lon: lon > 180 ? lon - 360 : lon, range: 40 }); }
-  }
-  list.hidden = !q;
-  list.innerHTML = hits.length ? hits.slice(0, 8).map((h, i) => `<li><button data-i="${i}"><b></b><small></small></button></li>`).join('') : '<li class="none">Nada encontrado. Tente "Olympus", "Gale" ou "18.45, 77.40".</li>';
-  list.querySelectorAll('button').forEach((b, i) => { b.querySelector('b').textContent = hits[i].n; b.querySelector('small').textContent = hits[i].sub; });
-}
-function go(h) {
-  list.hidden = true; input.value = h.n; input.blur();
-  if (A.state.view !== 'globe' && A.state.view !== 'map') A.setView(mapView);
-  if (onMap()) A.map.flyTo([h.lat, h.lon], h.range <= 10 ? 15 : h.range <= 100 ? 11 : h.range <= 700 ? 7 : 5);
-  else A.globe.flyTo(h.lat, h.lon, h.range);
-  if (h.poi && h.poi.k !== 'base') setTimeout(() => A.openTruth(A.poiTruth(h.poi)), 900);
-}
-input.addEventListener('input', runSearch);
-input.addEventListener('focus', runSearch);
-input.addEventListener('keydown', e => { if (e.key === 'Enter' && hits[0]) go(hits[0]); if (e.key === 'Escape') { list.hidden = true; input.blur(); } });
-list.addEventListener('mousedown', e => { const b = e.target.closest('button'); if (b) { e.preventDefault(); go(hits[+b.dataset.i]); } });
-document.addEventListener('mousedown', e => { if (!e.target.closest('.search')) list.hidden = true; });
+A.places = PLACES;
+const input = $('#search');
 window.addEventListener('keydown', e => {
   if (e.key === 'Escape') { setDrawer(false); setPois(false); if (A.state.dropMode) A.setDropMode(false); }
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); input.focus(); }

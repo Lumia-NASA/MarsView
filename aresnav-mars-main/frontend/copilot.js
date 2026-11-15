@@ -100,7 +100,28 @@ $('#aresQuick').innerHTML = QUICK.map(q => `<button type="button">${q}</button>`
 const log = $('#aresLog'), history = [];
 let aiReady = null;   // o backend diz se há credencial da API; sem ela nem tenta (evita erro no console)
 fetch(`${A.API}/copilot/status`).then(r => r.ok ? r.json() : null).then(j => { aiReady = !!(j && j.ai); $('#aresMode').textContent = aiReady ? `${j.provider === 'nvidia' ? 'NVIDIA' : 'Claude'} · ${String(j.model).split('/').pop()}` : (en() ? 'local mode (no AI key)' : 'modo local (sem chave da IA)'); }).catch(() => { aiReady = false; });
-let voiceOn = true;
+const voiceControls = document.createElement('div');
+voiceControls.className = 'ares-voice-controls';
+voiceControls.innerHTML = '<button type="button" id="aresVoice" aria-pressed="true">Voice on</button><button type="button" id="aresVoicePreview">Test voice</button><span id="aresVoiceStatus" role="status" aria-live="polite"></span>';
+panel.querySelector('header').after(voiceControls);
+$('#aresVoice').onclick = () => window.MarsVoice.setEnabled(!window.MarsVoice.enabled);
+$('#aresVoicePreview').onclick = () => {
+  if (window.MarsVoice.status === 'speaking' || window.MarsVoice.status === 'loading') {
+    window.MarsVoice.stop(); return;
+  }
+  window.MarsVoice.setEnabled(true);
+  A.speak("Welcome to MarsView. I'm Ares, your guide to exploring Mars. Let's take a closer look at Jezero Crater.");
+};
+window.MarsVoice.subscribe(({ enabled, status }) => {
+  $('#aresVoice').textContent = enabled ? 'Voice on' : 'Voice off';
+  $('#aresVoice').setAttribute('aria-pressed', String(enabled));
+  $('#aresVoice').setAttribute('aria-label', enabled ? 'Mute all dashboard speech' : 'Enable dashboard speech');
+  $('#aresVoicePreview').textContent = status === 'loading' || status === 'speaking' ? 'Stop voice' : 'Test voice';
+  $('#aresVoiceStatus').textContent = ({
+    loading: 'Preparing voice…', speaking: 'Speaking', unavailable: 'Voice unavailable. Please try again.',
+    blocked: 'Select Test voice to enable audio.', 'too-long': 'This response is too long to read aloud.',
+  })[status] || (enabled ? 'Ava · English' : 'Muted');
+});
 function add(role, text, meta) {
   const li = document.createElement('li'); li.className = role;
   li.textContent = text; if (meta) { const m = document.createElement('small'); m.textContent = meta; li.appendChild(m); }
@@ -129,7 +150,7 @@ async function ask(q) {
   add('ares-msg', answer, meta);
   $('#aresMode').textContent = meta;
   history.push({ role: 'user', text: q }, { role: 'assistant', text: answer });
-  if (voiceOn && A.speak) A.speak(answer);
+  if (A.speak) A.speak(answer);
 }
 $('#aresForm').addEventListener('submit', e => { e.preventDefault(); ask($('#aresIn').value); });
 $('#aresQuick').addEventListener('click', e => { const b = e.target.closest('button'); if (b) ask(b.textContent); });

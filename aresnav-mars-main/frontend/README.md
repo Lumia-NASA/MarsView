@@ -29,10 +29,9 @@ The interface is **English only**, as the submission rules require. The code wri
 
 1. Click the little astronaut (bottom right corner) and then any point on the globe or the map. Or use the search and land there.
 2. The app asks the backend for the real terrain of the place (`/api/v1/dem/patch/:lat/:lon`: 2° × 2° blocks, HRSC + MOLA, about 230 m per point) and puts the camera 1.7 m above the ground, at **real scale**.
-3. In the Helmet view, 3D terrain mode, there are three ways to move:
-   - **On foot:** a suited astronaut with eyes at 1.7 m, 2.9 km/h (Shift = 5.8 km/h), with a natural step and head bob.
+3. In the Helmet view, 3D terrain mode, there are two ways to move:
+   - **On foot:** a suited astronaut with eyes at 1.7 m, 5.0 km/h (Shift = 7.9 km/h), with a natural step and head bob.
    - **Rover:** a crewed rover with eyes at 2.4 m, 10 km/h (Shift = 15 km/h). It tilts with the ground and stops on climbs above 20°.
-   - **Free flight:** `E` climbs, `Q` descends (or the mouse wheel, or the "Height" slider, from 1.7 m to 20 km); speed grows with height.
    - The visor footer shows latitude, longitude, ground elevation, your height and the local slope, all computed from NASA's terrain.
 
 On the globe the terrain is also at real scale; the `1×` / `2.5×` button exaggerates height only for reading the view from above. On the ground the scale is always 1×. Because HiRISE and CTX are grayscale images, walking mode applies a filter that paints the grays with the Martian soil palette.
@@ -102,7 +101,7 @@ To point to another backend address, set `window.ARESNAV_API` in `config.js`. If
 - **Suit payload:** the "Samples and equipment payload" slider (0 to 25 kg) instantly changes the slope limit (`max(8, 15 − 0.2 × kg)`) and the consumption (`1 + 0.018 × kg`). The route is recomputed; if there is no path within the limit or the oxygen forecast on return drops below 30%, the verdict becomes `NO-GO · too steep` or `NO-GO · not enough O₂`, the visor shows an alert and the browser speaks the warning. The formulas are in `physics.js` and are tested in `tests/physics-test.js`.
 - **Link cut:** the **NASA link · live** button, next to ▶, simulates the Earth–Mars link going down. The app switches to local data and the backend cache only, and navigation keeps working.
 - **Crew:** in the Helmet view, the left panel shows you, your buddy (distance from the contract, a sample value) and the support rover with the computed distance to the extraction point.
-- **Ways to move:** in the Helmet's 3D terrain, **On foot**, **Rover** and **Free flight** (see above). The walk simulation runs at 1× (real time), 60× and 360×.
+- **Ways to move:** in the Helmet's 3D terrain, **On foot** or in a **Rover** (see above). The walk simulation runs at 1× (real time), 60× and 360×.
 - **Provenance:** the footer shows where the data comes from and the EvidenceGate SHA-256 seal read from the backend.
 
 ## Walk safety and copilot
