@@ -1,0 +1,31 @@
+{
+  "voice": "en-US-AriaNeural",
+  "rate": "+24%",
+  "lines": [
+    {
+      "id": "01-answers",
+      "start": 0.2,
+      "text": "Before every walk on Mars, an astronaut needs three answers: can I get there, can I get back, and will anyone hear me?"
+    },
+    {
+      "id": "02-data",
+      "start": 6.0,
+      "text": "MarsView turns real NASA and ESA data, one-meter HiRISE terrain, MEDA weather and Perseverance's own route, into a go or no-go."
+    },
+    {
+      "id": "03-why",
+      "start": 13.5,
+      "text": "When the answer is no, it says why, and what to change: carry less, or turn back at three kilometers."
+    },
+    {
+      "id": "04-ares",
+      "start": 20.1,
+      "text": "Out there, ARES follows the walk and calls the turn-back point."
+    },
+    {
+      "id": "05-close",
+      "start": 24.7,
+      "text": "MarsView. Every step planned. Every breath counted."
+    }
+  ]
+}
