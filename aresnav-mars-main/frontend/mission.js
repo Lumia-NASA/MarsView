@@ -159,7 +159,7 @@ extra.innerHTML = `
   <label class="layer"><input type="checkbox" id="ov-channels" checked><b>Canais dos rios</b><small>Neretva e Sava (entrada), Pliva (saída)</small></label>
   <label class="layer"><input type="checkbox" id="ov-ellipse" checked><b>Elipse de pouso do Perseverance</b><small>Área-alvo do pouso da Mars 2020</small></label>
   <label class="layer"><input type="checkbox" id="ov-pano360" checked><b>Panoramas 360° do rover</b><small>Laranja: foto real do rover · roxo: vista sintética do relevo · clique para ver em 360°</small></label>
-  <label class="layer"><input type="checkbox" id="ov-contour"><b>Curvas de nível</b><small>Relevo da FU Berlin (HRSC + HiRISE)</small></label>
+  <label class="layer"><input type="checkbox" id="ov-contour" checked><b>Curvas de nível</b><small>Relevo da FU Berlin (HRSC + HiRISE)</small></label>
   <h3 class="gap">Marte inteiro</h3>
   <label class="layer"><input type="checkbox" id="ov-sites" checked><b>Locais de pouso</b><small>14 sondas e rovers, 1971–2021</small></label>
   <label class="layer"><input type="checkbox" id="ov-zones"><b>Zonas de exploração humana</b><small>51 propostas · workshop NASA 2015</small></label>

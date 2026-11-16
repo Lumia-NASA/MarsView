@@ -392,6 +392,7 @@ function initMap() {
       .bindTooltip(`${p.n} · ${p.src}`, { className: 'tag', direction: 'top', offset: [0, -6] })
       .on('click', e => { L.DomEvent.stopPropagation(e); openTruth(poiTruth(p)); }).addTo(groups.poi);
   });
+  L.rectangle([[YMIN, XMIN], [YMAX, XMAX]], { color: '#ECE6DC', weight: 1, opacity: 0.35, fill: false, dashArray: '4 6', interactive: false }).addTo(map);
   map.on('mousemove', e => readout(e.latlng.lat, e.latlng.lng));
   map.on('click', e => pick(e.latlng.lat, e.latlng.lng));
   $('#m-jezero').onclick = () => map.flyTo([18.462, 77.42], link.mapsOnline ? 12.5 : 11.5);
@@ -678,7 +679,7 @@ function setGoalLL(lat, lon, poi) {
   state.goalLL = [lat, lon];
   state.goal = HGT ? cellOf(lat, lon) : -1;
   state.msg = '';
-  if (state.goal < 0) state.msg = 'Esse ponto está fora da área do planejador de missão em Jezero. Use Directions na pesquisa para planejar uma rota global.';
+  if (state.goal < 0) state.msg = 'Esse ponto está fora da área com relevo detalhado (o retângulo pontilhado em Jezero). Escolha um local dentro dele.';
   else if (SL[state.goal] > LIM[state.mode]) state.msg = `Esse ponto tem declive de ${Math.round(SL[state.goal])}°, acima do limite de ${num(LIM[state.mode], 1)}°. Reduza a carga ou escolha um local mais plano.`;
   recompute();
 }
@@ -687,7 +688,7 @@ function nearPoi(lat, lon, maxM) { let best = null, bd = maxM; for (const p of P
 /* Clique no mapa ou no globo: em cima de um ponto abre a foto de solo; em terreno livre define o destino */
 function pick(lat, lon) {
   if (state.dropMode) return dropAt(lat, lon);
-  if (api.navigation) return api.navigation.pick(lat, lon);
+  if (api.navigation && api.navigation.picking) return api.navigation.pick(lat, lon);   // "Directions" da pesquisa escolhendo partida/destino
   const targets = (state.tele && state.tele.layers && state.tele.layers.science_targets) || [];
   const t = targets.find(q => metersBetween(lat, lon, q.lat, q.lng) < 250);
   if (t) return openTruth(targetTruth(t));
@@ -893,10 +894,6 @@ function setPlaying(p) {
 
 /* ---------- Modos de operação: [HABITAT PLANNER] ⇄ [HELMET HUD] ---------- */
 function setView(v) {
-  if (v === 'helmet' && state.view !== 'helmet') {
-    const center = state.view === 'map' && map ? map.getCenter() : api.globe?.surfacePoint();
-    state.surfaceEntry = center ? { lat: center.lat, lon: center.lon ?? center.lng } : { lat: BASE.lat, lon: BASE.lon };
-  }
   state.view = v;
   if (v !== 'helmet') state.plannerView = v;
   state.op = v === 'helmet' ? 'helmet' : 'planner';

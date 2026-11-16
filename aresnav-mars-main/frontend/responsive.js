@@ -7,9 +7,7 @@
   const text = (en, pt) => window.LANG === 'en' ? en : pt;
   let active = null, previousFocus = null;
   const left = $('#leftPanel'), right = $('#rightPanel');
-  // Legacy calculation modules still update these nodes. They are not workspace UI.
-  $('.dock').hidden = true;
-  $('.dock').inert = true;
+  // A barra da simulação (▶, Follow live, enlace NASA, voltar à base) fica visível, como no mapa do AresNav.
   body.classList.add('map-workspace');
   const toolbar = document.createElement('div');
   toolbar.className = 'workspace-toolbar';
