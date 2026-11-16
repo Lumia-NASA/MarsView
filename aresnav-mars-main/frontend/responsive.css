@@ -45,7 +45,13 @@ body.ge .stage{inset:var(--bar) 0 var(--foot) calc(var(--rail) + var(--panel-spa
 body.ge #view-helmet,body.ge #view-telemetry{inset:0;padding:0}
 body.ge .floating.tl,body.ge.offline .floating.tl{top:16px;left:16px;transform:none;gap:8px;max-width:calc(100% - 32px)}
 .floating .ghost{min-height:40px;padding:8px 16px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:12px}
-.mission-banner,.sidetoggle,.dock{display:none!important}
+.mission-banner,.sidetoggle{display:none!important}
+/* Barra da simulação do mapa (▶, Follow live, enlace NASA, voltar à base): embaixo do mapa, à esquerda dos controles */
+body.ge .dock{left:calc(var(--rail) + var(--panel-space) + 16px);right:290px;bottom:calc(var(--foot) + 40px);justify-content:flex-start}
+body.ge.helmet-mode .dock{left:calc(var(--rail) + var(--panel-space) + 16px);right:16px;bottom:calc(var(--foot) + 8px);justify-content:center}
+body.ge.helmet-mode .hud-sols{bottom:calc(var(--foot) + 124px);z-index:30}
+body.ge.helmet-mode .hud-alert{bottom:calc(var(--foot) + 176px)!important}
+@media (max-width:700px),(max-height:500px){body.ge .dock{left:8px;right:8px;bottom:calc(var(--foot) + 64px);justify-content:center}}
 .cesium-viewer-bottom{bottom:8px!important;left:12px!important;transform:none!important;max-width:calc(100% - 24px);opacity:1}
 .cesium-credit-expand-link,.cesium-widget-credits,.leaflet-control-attribution{font-size:11px!important}
 .leaflet-bottom.leaflet-right{bottom:0}

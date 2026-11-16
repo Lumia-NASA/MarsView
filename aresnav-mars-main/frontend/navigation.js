@@ -274,6 +274,6 @@
         if (points.from && points.to) calculate();
       } else showPoint(p, false);
     },
-    get result() { return result; }, get points() { return points; }
+    get result() { return result; }, get points() { return points; }, get picking() { return picking; }
   };
 })();

@@ -46,10 +46,10 @@ describe('responsive mission panels', () => {
     expect(document.querySelector('.mapctl')).toBe(mapControls);
     expect(document.body.dataset.compactPanel).toBe('layers');
   });
-  it('removes simulation controls from the visible and accessible workspace', () => {
+  it('keeps the map simulation bar (play, follow live, link, return to base) visible and usable', () => {
     const dock = document.querySelector<HTMLElement>('.dock')!;
-    expect(dock.hidden).toBe(true);
-    expect(dock.inert).toBe(true);
+    expect(dock.hidden).toBe(false);
+    expect(dock.hasAttribute('inert') || dock.inert === true).toBe(false);
     expect(document.querySelector('[data-panel="simulation"]')).toBeNull();
   });
   it('keeps view selection reachable through Tools on a phone', () => {

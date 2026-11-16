@@ -111,13 +111,13 @@
     </section>
     <section class="block">
       <h3>Imagem</h3>
-      <label class="layer"><input type="radio" name="base" value="global" checked><b>Global Mars imagery</b><small>Viking · NASA/JPL/USGS</small></label>
-      <label class="layer"><input type="radio" name="base" value="fub"><b>Jezero em cor natural</b><small>HiRISE + CTX + HRSC · FU Berlin</small></label>
+      <label class="layer"><input type="radio" name="base" value="global"><b>Global Mars imagery</b><small>Viking · NASA/JPL/USGS</small></label>
+      <label class="layer"><input type="radio" name="base" value="fub" checked><b>Jezero em cor natural</b><small>HiRISE + CTX + HRSC · FU Berlin</small></label>
       <label class="layer"><input type="radio" name="base" value="hirise"><b>HiRISE 25 cm + CTX 6 m</b><small>Mars Reconnaissance Orbiter</small></label>
       <label class="layer"><input type="radio" name="base" value="mosaic"><b>Mosaico de pouso Mars 2020</b><small>HiRISE + CTX + HRSC</small></label>
       <label class="layer"><input type="radio" name="base" value="relief"><b>Relevo colorido</b><small>MOLA + HRSC</small></label>
       <h3 class="gap">Camadas</h3>
-      <label class="layer"><input type="checkbox" id="ov-slope"><b>Declive</b><small>Calculado do relevo HRSC/MOLA (200 m)</small>
+      <label class="layer"><input type="checkbox" id="ov-slope" checked><b>Declive</b><small>Calculado do relevo HRSC/MOLA (200 m)</small>
         <span class="sw"><i style="--c:#D8A74E">4–8°</i><i style="--c:#D08A55">8–12°</i><i style="--c:#D8664F">&gt;12°</i></span></label>
       <label class="layer"><input type="checkbox" id="ov-themis"><b>Infravermelho diurno</b><small>THEMIS · Mars Odyssey</small></label>
       <label class="layer"><input type="checkbox" id="ov-crism" checked><b>Minerais hidratados</b><small>CRISM · MRO. Sinal de água no passado</small></label>
@@ -154,7 +154,7 @@
 <button class="sidetoggle right" id="rightToggle" aria-label="Recolher o plano da caminhada" aria-expanded="true">›</button>
 
 <!-- Barra da simulação -->
-<div class="dock" hidden inert aria-hidden="true">
+<div class="dock">
   <div class="transport">
     <span class="tlabel" title="Toca a caminhada planejada do começo ao fim, em tempo acelerado">Simulação</span>
     <button id="simPlay" class="play" aria-label="Simular a caminhada" title="Tocar a caminhada planejada">▶</button>
