@@ -45,7 +45,8 @@
   toolsBody.append(hint);
   const helmetTools = document.createElement('div'); helmetTools.className = 'compact-helmet-tools';
   toolsBody.append(helmetTools);
-  ['.hud-target', '.hud-source', '.hud-sols', '.hud-fx', '.hud-hint'].forEach(selector => {
+  // .hud-sols (Fotos do rover / Terreno 3D, andar, ir para) fica na tela do capacete, como no AresNav
+  ['.hud-target', '.hud-source', '.hud-fx', '.hud-hint'].forEach(selector => {
     const node = $(selector); if (node) helmetTools.append(node);
   });
   left.querySelector('h2').textContent = text('Mission setup', 'Preparar missão');
