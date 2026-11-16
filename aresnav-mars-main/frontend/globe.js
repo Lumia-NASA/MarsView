@@ -41,13 +41,16 @@ function fitOverview(duration = 0) {
 const layers = {}, ents = { route: [], pois: [], rover: [], crism: [] };
 const walk = { on: false, lat: 0, lon: 0, heading: 0, pitch: -3, alt: EYE, vel: 0, keys: {}, last: 0, sent: 0, off: null, pace: 'real', moving: false, speed: 0, gx: 0, gy: 0,
   odo: 0, phase: 0, gz: null, yaw: 0, vp: 0, vr: 0, warn: null };
-/* Dois jeitos de andar no Terreno 3D (hipóteses em docs/ASSUMPTIONS.md):
-   a pé (pace 'real'): astronauta de traje, olhos a 1,7 m, 1,4 m/s (5,0 km/h), passos de 0,7 m;
-   rover ('rover'): rover tripulado pressurizado, olhos a 2,4 m, 10 km/h de cruzeiro (Shift = 15 km/h), sobe até 20°. */
-const FOOT = { cruise: 1.4, max: 2.2, stride: 0.7, turn: 70 };
+/* Três jeitos de andar no Terreno 3D (hipóteses em docs/ASSUMPTIONS.md):
+   a pé (pace 'real'): astronauta de traje, olhos a 1,7 m, 0,8 m/s (2,9 km/h), passos de 0,7 m;
+   rover ('rover'): rover tripulado pressurizado, olhos a 2,4 m, 10 km/h de cruzeiro (Shift = 15 km/h), sobe até 20°;
+   voo livre ('fast'): câmera solta, a velocidade cresce com a altura. */
+const FOOT = { cruise: 0.8, max: 1.6, stride: 0.7, turn: 70 };
 const ROVER = { eye: 2.4, cruise: 10 / 3.6, max: 15 / 3.6, accel: 0.8, brake: 2.2, slopeMax: 20, rollMax: 25, turn: 28 };
 const eyeFor = p => (p === 'rover' ? ROVER.eye : EYE);
-/* Passo a pé: 1,4 m/s (5,0 km/h) e 2,2 m/s com Shift, sempre a 1,7 m do chão. */
+/* Passo real: astronauta de traje, 0,8 m/s (2,9 km/h) e 1,6 m/s com Shift, sempre a 1,7 m do chão.
+   Visualização: a pessoa escolhe a altura (1,7 m a 20 km) e a velocidade cresce com ela. */
+const ALT_MAX = 20000;
 
 function fail(e) {
   failed = true; console.error('Globo 3D', e);
@@ -191,6 +194,8 @@ function line(coords, color, width, style) {
 }
 
 function buildStatic() {
+  const B = A.BOX;
+  line([B.XMIN, B.YMIN, B.XMAX, B.YMIN, B.XMAX, B.YMAX, B.XMIN, B.YMAX, B.XMIN, B.YMIN], 'rgba(232,236,248,.45)', 1.5, 'dash');
   viewer.entities.add({ position: C.Cartesian3.fromDegrees(77.4, 18.47), label: Object.assign(label('Cratera Jezero', 4e7, 250000), { pixelOffset: new C.Cartesian2(0, -14) }), point: point('#C46F4B', 9, '#C46F4B') });
   if (A.roverRuns) { // trajeto do rover com gradiente de perigo por declive
     const col = A.SLOPE_COL(), mars = A.cssv('--mars');
@@ -488,7 +493,7 @@ function fxOn() {
     fx.east = new C.Cartesian3(1, 0, 0); fx.north = new C.Cartesian3(0, 1, 0); fx.ground = new C.Cartesian2(0, 0);
     fx.stage = scene.postProcessStages.add(new C.PostProcessStage({ fragmentShader: WALK_FS, uniforms: {
       u_east: () => fx.east, u_north: () => fx.north, u_ground: () => fx.ground,
-      u_haze: () => 9000 * K, u_unit: () => K } }));
+      u_haze: () => (walk.pace === 'fast' ? 60000 : 9000) * K, u_unit: () => K } }));
     // neblina invisível (o céu e a poeira vêm do shader): serve só para o Cesium pedir menos detalhe e descartar
     // blocos que a poeira já esconderia. Corta ~40% dos blocos desenhados sem mudar a imagem.
     scene.fog.enabled = true; scene.fog.renderable = false; scene.fog.density = 2.0e-4 / K; scene.fog.screenSpaceErrorFactor = 4;
@@ -542,10 +547,8 @@ function fxFrame() {
 function move(m) {
   const r = Math.PI / 180; walk.moved = true;   // andou por conta própria: a execução mede o desvio da rota
   walk.gx += m * Math.sin(walk.heading * r); walk.gy += m * Math.cos(walk.heading * r); // metros andados, para o granulado do solo não escorregar
-  const latitude = walk.lat * r, heading = walk.heading * r, angle = m / A.R_MARS;
-  const nextLatitude = Math.asin(Math.max(-1, Math.min(1, Math.sin(latitude) * Math.cos(angle) + Math.cos(latitude) * Math.sin(angle) * Math.cos(heading))));
-  walk.lon += Math.atan2(Math.sin(heading) * Math.sin(angle) * Math.cos(latitude), Math.cos(angle) - Math.sin(latitude) * Math.sin(nextLatitude)) / r;
-  walk.lat = nextLatitude / r;
+  walk.lat = Math.max(-88, Math.min(88, walk.lat + m * Math.cos(walk.heading * r) / (A.R_MARS * r)));
+  walk.lon += m * Math.sin(walk.heading * r) / (A.R_MARS * r * Math.cos(walk.lat * r));
   walk.lon = ((walk.lon + 540) % 360) - 180;
 }
 let SKY = null;
@@ -572,18 +575,28 @@ function groundLook(on) {
   if (layers.wash) layers.wash.alpha = on && tintStage ? 0 : 0.42;
   if (layers.tint) layers.tint.alpha = on && tintStage ? 0 : 0.5;
 }
+function setAlt(m) {
+  m = Math.max(EYE, Math.min(ALT_MAX, m));
+  if (walk.pace !== 'fast') {                       // a pé e de rover os olhos ficam na altura certa; subir de verdade é voar
+    if (m <= eyeFor(walk.pace) + 1.3) { walk.alt = eyeFor(walk.pace); return; }
+    walk.pace = 'fast';
+  }
+  walk.alt = m;
+}
 function setPace(p) {
-  if (p !== 'real' && p !== 'rover') throw new RangeError(`Modo de locomoção inválido: ${p}`);
-  walk.pace = p; walk.alt = eyeFor(p); walk.vel = Math.min(walk.vel, p === 'real' ? FOOT.max : ROVER.max); walk.vp = walk.vr = 0; walk.warn = null;
+  if (p === 'real' || p === 'rover') { walk.pace = p; walk.alt = eyeFor(p); walk.vel = Math.min(walk.vel, p === 'real' ? FOOT.max : ROVER.max); walk.vp = walk.vr = 0; walk.warn = null; }
+  else if (p === 'fast') { walk.pace = 'fast'; walk.alt = Math.max(walk.alt, 30); walk.warn = null; }   // o voo começa claramente no ar
 }
 function step() {
   const now = performance.now(), dt = Math.min(0.1, (now - walk.last) / 1000), k = walk.keys; walk.last = now;
-  const turn = (k.right ? 1 : 0) - (k.left ? 1 : 0), mv = (k.fwd ? 1 : 0) - (k.back ? 1 : 0);
+  const turn = (k.right ? 1 : 0) - (k.left ? 1 : 0), mv = (k.fwd ? 1 : 0) - (k.back ? 1 : 0), lift = (k.up ? 1 : 0) - (k.down ? 1 : 0);
   const foot = walk.pace === 'real', rover = walk.pace === 'rover';
-  walk.yaw += (turn * (foot ? FOOT.turn : ROVER.turn) - walk.yaw) * Math.min(1, dt * 6);
+  // curva: a pé e de rover ela começa e termina aos poucos; no voo responde na hora
+  walk.yaw += (turn * (foot ? FOOT.turn : rover ? ROVER.turn : 60) - walk.yaw) * Math.min(1, dt * (foot || rover ? 6 : 20));
   if (Math.abs(walk.yaw) > 0.05) walk.heading = (walk.heading + walk.yaw * dt + 360) % 360;
+  if (lift) setAlt(walk.alt * Math.exp(lift * 1.3 * dt) + lift * 0.8 * dt);
   if (foot) {
-    walk.vel += (mv * (k.fast ? FOOT.max : FOOT.cruise) - walk.vel) * Math.min(1, dt * 3);
+    walk.vel += (mv * (k.fast ? FOOT.max : FOOT.cruise) - walk.vel) * Math.min(1, dt * 3);   // arranca e para em ~1 s, como de traje
   } else if (rover) {
     const t = tilt(); walk.vp += (t.pitch - walk.vp) * Math.min(1, dt * 3); walk.vr += (t.roll - walk.vr) * Math.min(1, dt * 3);
     let want = mv * (k.fast ? ROVER.max : ROVER.cruise);
@@ -593,6 +606,9 @@ function step() {
     if (walk.warn === 'slope') want = 0;
     const d = want - walk.vel, lim = (Math.abs(want) > Math.abs(walk.vel) && want * walk.vel >= 0 ? ROVER.accel : ROVER.brake) * dt;
     walk.vel += Math.max(-lim, Math.min(lim, d));
+  } else {
+    // voo livre: a velocidade acompanha a altura (voo baixo é lento, voo alto é rápido)
+    walk.vel += (mv * Math.max(25, walk.alt * 1.5) * (k.fast ? 10 : 1) - walk.vel) * Math.min(1, dt * 5);
   }
   if (Math.abs(walk.vel) > 0.005) { move(walk.vel * dt); walk.odo += Math.abs(walk.vel * dt); walk.phase += Math.abs(walk.vel * dt) / FOOT.stride; }
   walk.moving = Math.abs(walk.vel) > 0.05; walk.speed = Math.abs(walk.vel);
@@ -601,18 +617,9 @@ function step() {
   viewer.scene.backgroundColor = C.Color.lerp(C.Color.BLACK, SKY || (SKY = C.Color.fromCssColorString('#cfa67f')), Math.max(0, 1 - walk.alt / 30000), new C.Color());
   if (now - walk.sent > 100) { walk.sent = now; A.emit('walk', walk); }
 }
-let orbitalCamera = null;
 function enterWalk(host, lat, lon, heading) {
   init(); if (!viewer) return false;
-  if (walk.on) return true;
   viewer.camera.cancelFlight();
-  orbitalCamera = {
-    position: C.Cartesian3.clone(viewer.camera.positionWC),
-    direction: C.Cartesian3.clone(viewer.camera.directionWC),
-    up: C.Cartesian3.clone(viewer.camera.upWC),
-    near: viewer.camera.frustum.near,
-    overview,
-  };
   Object.assign(walk, { on: true, lat, lon, heading, pitch: -3, vel: 0, keys: {}, last: performance.now(), moved: false, gz: null, yaw: 0, vp: 0, vr: 0, warn: null, odo: 0 });
   setEx(1);                                   // no chão a escala é sempre real
   viewer.camera.frustum.near = 0.2 * K;       // deixa ver o chão a 1,7 m sem cortar
@@ -627,45 +634,24 @@ function enterWalk(host, lat, lon, heading) {
 }
 function exitWalk() {
   if (!walk.on) return;
-  viewer.useDefaultRenderLoop = false;
-  viewer.camera.cancelFlight();
-  walk.on = false;
-  if (walk.off) { walk.off(); walk.off = null; }
-  walk.keys = {}; walk.vel = 0; walk.moving = false;
+  walk.on = false; if (walk.off) walk.off();
   const home = $('#view-globe'); home.insertBefore($('#globe'), home.firstChild);
   viewer.scene.screenSpaceCameraController.enableInputs = true;
   fxOff();
   viewer.scene.fog.enabled = false;
-  viewer.camera.frustum.near = orbitalCamera?.near ?? 1.0; setEx(userEx);
+  viewer.camera.frustum.near = 1.0; setEx(userEx);
   if (viewer.scene.skyBox) viewer.scene.skyBox.show = true;
   if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = true;
   viewer.scene.backgroundColor = C.Color.BLACK; groundLook(false);
-  // Restore the orbit the visitor left, including its orientation, before resuming
-  // drawing. Do not start a flight from a hidden canvas or the helmet's ground view.
-  if (orbitalCamera) {
-    overview = orbitalCamera.overview;
-    viewer.camera.setView({
-      destination: orbitalCamera.position,
-      orientation: { direction: orbitalCamera.direction, up: orbitalCamera.up },
-      endTransform: C.Matrix4.IDENTITY,
-    });
-    // Keep the saved world-space basis exact on Mars's non-WGS84 ellipsoid.
-    // setView converts direction/up through geographic heading/pitch internally.
-    C.Cartesian3.clone(orbitalCamera.direction, viewer.camera.direction);
-    C.Cartesian3.clone(orbitalCamera.up, viewer.camera.up);
-    C.Cartesian3.cross(viewer.camera.direction, viewer.camera.up, viewer.camera.right);
-    orbitalCamera = null;
-  }
-  if (A.state.view === 'globe') { viewer.resize(); fitOverview(); }
+  viewer.useDefaultRenderLoop = A.state.view === 'globe'; viewer.resize();
   applyLayers(A.layerState()); drawNow();
-  viewer.useDefaultRenderLoop = A.state.view === 'globe';
-  viewer.scene.requestRender();
+  viewer.camera.setView({ destination: C.Cartesian3.fromDegrees(77.4, 14, 320000 * K) });
+  flyJezero();
 }
 
 A.on('ready', () => { if (A.state.view === 'globe') init(); });
 A.on('view', v => {
-  if (v !== 'helmet' && walk.on) exitWalk();
-  if (v === 'globe') { init(); if (viewer) { viewer.resize(); fitOverview(); viewer.useDefaultRenderLoop = true; viewer.scene.requestRender(); } }
+  if (v === 'globe') { init(); if (viewer) { viewer.useDefaultRenderLoop = true; viewer.resize(); } }
   else if (viewer && !walk.on) viewer.useDefaultRenderLoop = false;
 });
 A.on('layers', applyLayers);
@@ -683,37 +669,19 @@ A.globe = {
   /* Para a alguns passos ao sul do ponto, olhando para ele */
   visit(p) { const back = ({ habitat: 24, landing: 20, crystals: 22, depot: 17, strata: 15 }[p.site] || 9) * EYE / 1.7; walk.lat = p.lat - back / (A.R_MARS * Math.PI / 180); walk.lon = p.lon; walk.heading = 0; walk.pitch = -6; walk.vel = 0; walk.gz = null; },
   look(dAz, dEl) { walk.heading = (walk.heading + dAz + 360) % 360; walk.pitch = Math.max(-85, Math.min(60, walk.pitch + dEl)); },
-  EYE, ROVER, FOOT,
+  setAlt, EYE, ALT_MAX, ROVER, FOOT,
   setExaggeration(v) { userEx = v; if (!walk.on) setEx(v); return EX; },
   get exaggeration() { return userEx; },
   stepBy(m) { move(m); },
   setPace,
   /* usados pela busca e pelos controles do mapa */
-  surfacePoint() {
-    if (!viewer) return null;
-    const canvas = viewer.scene.canvas;
-    const screen = new C.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
-    const ray = viewer.camera.getPickRay(screen);
-    const hit = ray && viewer.scene.globe.pick(ray, viewer.scene);
-    const point = hit ? C.Cartographic.fromCartesian(hit) : viewer.camera.positionCartographic;
-    return { lat: C.Math.toDegrees(point.latitude), lon: C.Math.toDegrees(point.longitude) };
-  },
-  fitRoute(points) {
-    if (!viewer || !points.length) return;
-    overview = false;
-    const sphere = C.BoundingSphere.fromPoints(points.map(p => groundPos(p.lat, p.lon)));
-    viewer.camera.flyToBoundingSphere(sphere, { duration: 1.2,
-      offset: new C.HeadingPitchRange(0, -Math.PI / 2, Math.max(3000 * K, sphere.radius * 3.4)) });
-  },
   flyTo(lat, lon, rangeKm) {
     if (!viewer) return;
-    overview = false;
     viewer.camera.flyToBoundingSphere(new C.BoundingSphere(groundPos(lat, lon), 500 * K),
       { offset: new C.HeadingPitchRange(0, C.Math.toRadians(rangeKm > 800 ? -89 : -55), rangeKm * 1000 * K), duration: 2.6 });
   },
   zoom(f) { // f < 1 aproxima, f > 1 afasta
     if (!viewer) return;
-    overview = false;
     const cam = viewer.camera, ground = A.heightAt(C.Math.toDegrees(cam.positionCartographic.latitude), C.Math.toDegrees(cam.positionCartographic.longitude)) * VS * EX;
     const above = Math.max(300 * K, cam.positionCartographic.height - ground);
     if (f < 1) cam.zoomIn(above * (1 - f)); else cam.zoomOut(Math.min(above * (f - 1), 2.5e7 * K - above));
